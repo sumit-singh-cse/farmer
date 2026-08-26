@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centre Operator Dashboard - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="../common/style.css">
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    .operator-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .status-pill {
+      padding: 0.25rem 0.5rem;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .pill-booked { background-color: rgba(244, 162, 97, 0.15); color: var(--warning-color); }
+    .pill-arrived { background-color: rgba(42, 157, 143, 0.15); color: var(--success-color); }
+    .pill-processing { background-color: rgba(27, 77, 62, 0.15); color: var(--primary-light); }
+    .pill-completed { background-color: rgba(15, 23, 42, 0.15); color: var(--text-main); }
+    .pill-absent { background-color: rgba(230, 57, 70, 0.15); color: var(--danger-color); }
+
+    /* Weighing Panel Modal Mock style */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-fast);
+    }
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .weighing-modal {
+      background: white;
+      width: 100%;
+      max-width: 500px;
+      border-radius: var(--radius-md);
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-20px);
+      transition: transform var(--transition-normal);
+    }
+    .modal-backdrop.open .weighing-modal {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2 style="font-size: 2rem; color: var(--primary-dark);" id="centre-title">Centre Operator Dashboard</h2>
+        <p style="color: var(--text-muted);">Operator Code: <strong id="operator-code-display">OP-UJN-02</strong> | Status: 🟢 Open</p>
+      </div>
+
+      <!-- Capacity Info Header -->
+      <div style="display: flex; gap: 1.5rem;">
+        <div class="card" style="padding: 0.5rem 1rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);">
+          <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 600;">Today's Storage Load</span>
+          <strong style="color: var(--primary-color);" id="today-storage-load">0 / 0 Qtl (0%)</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Bookings & Queue Management -->
+    <div class="card">
+      <h3 style="color: var(--primary-dark); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <span id="queue-date-subtitle">📅 Today's Live Queue Bookings</span>
+        <button class="btn btn-outline" style="padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="renderQueue()">🔄 Refresh Queue</button>
+      </h3>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
+              <th style="padding: 1rem 0.5rem;">Token</th>
+              <th style="padding: 1rem 0.5rem;">Farmer Details</th>
+              <th style="padding: 1rem 0.5rem;">Crop (Booked Qty)</th>
+              <th style="padding: 1rem 0.5rem;">Scheduled Slot</th>
+              <th style="padding: 1rem 0.5rem;">Status</th>
+              <th style="padding: 1rem 0.5rem; text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="queue-rows">
+            <!-- Dynamically populated from API -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Weighing & Quality Form Dialog -->
+  <div class="modal-backdrop" id="weighing-dialog">
+    <div class="weighing-modal">
+      <h3 style="color: var(--primary-dark); margin-bottom: 0.5rem;">⚖️ Record Procurement Weight</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;" id="modal-subheading">
+        Token: T-1001 | Farmer: Harish Prasad
+      </p>
+
+      <form id="weighing-form">
+        <input type="hidden" id="modal-token">
+        
+        <div class="form-group">
+          <label class="form-label">Expected Booking Quantity (Quintals)</label>
+          <input type="text" id="expected-qty" class="form-control" disabled style="background-color: #f1f5f9; font-weight: bold;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="actual-qty">Actual Weighed Quantity (Quintals)</label>
+          <input type="number" id="actual-qty" class="form-control" step="0.1" placeholder="e.g. 9.8" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="accepted-qty">Accepted Quantity (Quintals)</label>
+          <input type="number" id="accepted-qty" class="form-control" step="0.1" placeholder="e.g. 9.5" required>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Payouts are calculated based on accepted weight.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="rejected-qty">Rejected Quantity (Quintals)</label>
+          <input type="number" id="rejected-qty" class="form-control" step="0.1" value="0" readonly style="background-color: #f1f5f9;">
+        </div>
+
+        <div class="form-group" id="rejection-reason-group" style="display: none;">
+          <label class="form-label" for="rejection-reason">Reason for Quantity Correction/Rejection</label>
+          <input type="text" id="rejection-reason" class="form-control" placeholder="e.g. High moisture content, dust mixing">
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="button" class="btn btn-outline" style="flex: 1;" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Save Weighing</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="../common/common.js"></script>
+  <script src="../common/navbar.js"></script>
+  <script>
+    // ===== PHASE 5 & 6: CENTRE OPERATOR DASHBOARD FUNCTIONALITY =====
+
+    const modal = document.getElementById('weighing-dialog');
+    const actualInput = document.getElementById('actual-qty');
+    const acceptedInput = document.getElementById('accepted-qty');
+    const rejectedInput = document.getElementById('rejected-qty');
+    const reasonGroup = document.getElementById('rejection-reason-group');
+    const reasonInput = document.getElementById('rejection-reason');
+    const queueTable = document.getElementById('queue-rows');
+
+    // Auto-calculate rejected quantity
+    actualInput.addEventListener('input', updateRejected);
+    acceptedInput.addEventListener('input', updateRejected);
+
+    function updateRejected() {
+      const act = parseFloat(actualInput.value) || 0;
+      const acc = parseFloat(acceptedInput.value) || 0;
+      const rej = act - acc;
+
+      rejectedInput.value = rej >= 0 ? rej.toFixed(1) : 0;
+
+      if (rej > 0 || act !== parseFloat(document.getElementById('expected-qty').value)) {
+        reasonGroup.style.display = 'block';
+        reasonInput.setAttribute('required', 'required');
+      } else {
+        reasonGroup.style.display = 'none';
+        reasonInput.removeAttribute('required');
+      }
+    }
+
+    // Fetch queue from API and render table
+    async function renderQueue() {
+      try {
+        const user = getAuthUser();
+        if (!user || user.role !== 'centre') {
+          window.location.href = 'login.html';
+          return;
+        }
+
+        document.getElementById('operator-code-display').textContent = user.adminId || 'N/A';
+
+        const data = await fetchAPI('/api/centre/queue');
+        
+        // Update headers
+        document.getElementById('centre-title').textContent = `${data.centre.name} Operator Dashboard`;
+
+        // Calculate today's procured loads
+        let completedQty = 0;
+        data.queue.forEach(item => {
+          if (item.status === 'Completed') {
+            completedQty += item.quantity;
+          }
+        });
+        const utilPct = data.centre.storageCapacity > 0 ? ((completedQty / data.centre.storageCapacity) * 100).toFixed(1) : 0;
+        document.getElementById('today-storage-load').textContent = `${completedQty.toLocaleString()} / ${data.centre.storageCapacity.toLocaleString()} Qtl (${utilPct}%)`;
+
+        const todayDateStr = new Date(data.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        document.getElementById('queue-date-subtitle').textContent = `📅 Today's Live Queue Bookings (${todayDateStr})`;
+
+        if (!data.queue || data.queue.length === 0) {
+          queueTable.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">No active bookings for today</td></tr>`;
+          return;
+        }
+
+        queueTable.innerHTML = data.queue.map(b => {
+          let pillClass = 'pill-booked';
+          if (b.status === 'Arrived') pillClass = 'pill-arrived';
+          if (b.status === 'Processing') pillClass = 'pill-processing';
+          if (b.status === 'Completed') pillClass = 'pill-completed';
+          if (b.status === 'Absent') pillClass = 'pill-absent';
+
+          let actionsHtml = '';
+          if (b.status === 'Booked') {
+            actionsHtml = `
+              <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-color: var(--success-color); color: var(--success-color);" onclick="updateBookingStatus('${b.id}', 'Arrived')">Check-In</button>
+              <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-color: var(--danger-color); color: var(--danger-color);" onclick="updateBookingStatus('${b.id}', 'Absent')">Absent</button>
+            `;
+          } else if (b.status === 'Arrived') {
+            actionsHtml = `
+              <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="updateBookingStatus('${b.id}', 'Processing')">Start Processing</button>
+            `;
+          } else if (b.status === 'Processing') {
+            actionsHtml = `
+              <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background-color: var(--success-color); border-color: var(--success-color);" onclick="openWeighingModal('${b.id}', '${b.tokenNumber}', '${b.farmerName}', '${b.cropType}', ${b.quantity})">Weigh & Procure</button>
+            `;
+          } else {
+            actionsHtml = `<span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Completed</span>`;
+          }
+
+          return `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 1rem 0.5rem; font-weight: 700;">${b.tokenNumber}</td>
+              <td style="padding: 1rem 0.5rem; font-weight: 600;">${b.farmerName}<br><span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">Mobile: ${b.farmerMobile} | Khasra: ${b.landKhasra}</span></td>
+              <td style="padding: 1rem 0.5rem;">${b.cropType.toUpperCase()} (${b.quantity} Qtl)</td>
+              <td style="padding: 1rem 0.5rem;">${b.timeWindow}</td>
+              <td style="padding: 1rem 0.5rem;">
+                <span class="status-pill ${pillClass}">${b.status}</span>
+              </td>
+              <td style="padding: 1rem 0.5rem; text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
+                ${actionsHtml}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Queue render error:', err);
+        showToast('Failed to load queue', 'error');
+      }
+    }
+
+    function updateBookingStatus(id, status) {
+      fetchAPI(`/api/centre/bookings/${id}`, {
+        method: 'PATCH',
+        body: { status }
+      })
+      .then(data => {
+        showToast(`Booking status updated to ${status}`, 'success');
+        renderQueue();
+      })
+      .catch(err => {
+        // Handled in fetchAPI
+      });
+    }
+
+    // Open weighing modal
+    function openWeighingModal(bookingId, token, farmerName, cropType, quantity) {
+      document.getElementById('modal-token').value = bookingId;
+      document.getElementById('modal-subheading').textContent = `Token: ${token} | Farmer: ${farmerName} | Crop: ${cropType.toUpperCase()}`;
+      document.getElementById('expected-qty').value = quantity;
+
+      actualInput.value = quantity;
+      acceptedInput.value = quantity;
+      rejectedInput.value = 0;
+      reasonGroup.style.display = 'none';
+      reasonInput.value = '';
+      reasonInput.removeAttribute('required');
+
+      modal.classList.add('open');
+    }
+
+    // Close modal
+    function closeModal() {
+      modal.classList.remove('open');
+    }
+
+    // Handle weighing form submission
+    document.getElementById('weighing-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const bookingId = document.getElementById('modal-token').value;
+      const expected = parseFloat(document.getElementById('expected-qty').value);
+      const actual = parseFloat(actualInput.value);
+      const accepted = parseFloat(acceptedInput.value);
+      const reason = reasonInput.value;
+
+      try {
+        await fetchAPI('/api/procurements', {
+          method: 'POST',
+          body: {
+            bookingId,
+            expectedQuantity: expected,
+            actualWeight: actual,
+            acceptedQuantity: accepted,
+            rejectedQuantity: (actual - accepted).toFixed(1),
+            rejectionReason: reason
+          }
+        });
+
+        showToast(`Procurement recorded! ${accepted} Qtl accepted.`, 'success');
+        closeModal();
+        renderQueue();
+      } catch (err) {
+        // Handled in fetchAPI
+      }
+    });
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      renderQueue();
+    });
+  </script>
+</body>
+</html>

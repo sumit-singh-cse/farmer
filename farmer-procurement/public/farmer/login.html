@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Login - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="../common/style.css">
+  <style>
+    .login-container {
+      max-width: 450px;
+      margin: 3rem auto;
+    }
+    .otp-group {
+      display: none; /* Revealed after Send OTP is clicked */
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    .otp-btn-container {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <div class="login-container card">
+      <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; text-align: center; color: var(--primary-dark);">Farmer Login</h2>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">
+        Access your dashboard to book slots and track status.
+      </p>
+
+      <form id="farmer-login-form">
+        <div class="form-group">
+          <label class="form-label" for="mobile">Mobile Number</label>
+          <div class="otp-btn-container">
+            <input type="tel" id="mobile" class="form-control" placeholder="10-digit mobile number" pattern="[0-9]{10}" required style="flex: 1;">
+            <button type="button" id="send-otp-btn" class="btn btn-outline" style="padding: 0.8rem 1rem;">Send OTP</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="Enter password" required>
+        </div>
+
+        <div class="form-group otp-group" id="otp-container">
+          <label class="form-label" for="otp">One-Time Password (OTP)</label>
+          <input type="text" id="otp" class="form-control" placeholder="Enter 6-digit OTP code" pattern="[0-9]{6}">
+          <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">For demo mode, use OTP: 123456</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Login</button>
+      </form>
+
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+        <span style="color: var(--text-muted);">Account nahi hai?</span>
+        <a href="register.html" style="font-weight: 600;">New Registration</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="../common/common.js"></script>
+  <script src="../common/navbar.js"></script>
+  <script>
+    const sendOtpBtn = document.getElementById('send-otp-btn');
+    const otpContainer = document.getElementById('otp-container');
+    const form = document.getElementById('farmer-login-form');
+
+    sendOtpBtn.addEventListener('click', () => {
+      const mobileVal = document.getElementById('mobile').value;
+      if (!/^\d{10}$/.test(mobileVal)) {
+        showToast('Please enter a valid 10-digit mobile number first!', 'warning');
+        return;
+      }
+      fetchAPI('/api/send-otp', {
+        method: 'POST',
+        body: { mobile: mobileVal }
+      }).then(data => {
+        showToast(data.message, 'success');
+        otpContainer.style.display = 'block';
+        document.getElementById('otp').setAttribute('required', 'required');
+      }).catch(err => {
+        // Handled in fetchAPI
+      });
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const body = {
+        mobile: document.getElementById('mobile').value,
+        password: document.getElementById('password').value,
+        otp: document.getElementById('otp').value
+      };
+      
+      if (!body.otp) {
+        showToast('Please request and enter your OTP!', 'warning');
+        return;
+      }
+      
+      fetchAPI('/api/login', {
+        method: 'POST',
+        body
+      }).then(data => {
+        showToast('Login successful! Redirecting to dashboard...', 'success');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 1200);
+      }).catch(err => {
+        // Handled in fetchAPI
+      });
+    });
+  </script>
+</body>
+</html>

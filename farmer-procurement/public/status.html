@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Token Status - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="common/style.css">
+  <style>
+    .status-search-box {
+      max-width: 600px;
+      margin: 3rem auto;
+      text-align: center;
+    }
+    .status-result-card {
+      max-width: 600px;
+      margin: 2rem auto;
+      display: none;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-booked { background-color: rgba(244, 162, 97, 0.15); color: var(--warning-color); }
+    .status-arrived { background-color: rgba(42, 157, 143, 0.15); color: var(--success-color); }
+    .status-processing { background-color: rgba(27, 77, 62, 0.15); color: var(--primary-light); }
+    .status-completed { background-color: rgba(27, 77, 62, 0.25); color: var(--primary-dark); }
+    
+    .status-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+      text-align: left;
+      border-top: 1px solid var(--border-color);
+      padding-top: 1.5rem;
+    }
+    .detail-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .detail-value {
+      font-size: 1rem;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <div class="status-search-box card">
+      <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--primary-dark);">Track Token Status</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2rem;">
+        Enter your Booking Token number (e.g., T-1025) to check your estimated arrival window and real-time queue position.
+      </p>
+
+      <form id="token-search-form" style="display: flex; gap: 0.75rem; justify-content: center;">
+        <input type="text" id="token-input" class="form-control" placeholder="Enter Token Number (e.g. T-1001)" style="max-width: 350px;" required>
+        <button type="submit" class="btn btn-primary">Search Status</button>
+      </form>
+    </div>
+
+    <!-- Results Display -->
+    <div class="card status-result-card" id="search-result">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.4rem;" id="res-token-id">Token: T-XXXX</h3>
+        <span class="status-badge status-booked" id="res-status">Booked</span>
+      </div>
+
+      <div class="status-details-grid">
+        <div>
+          <div class="detail-label">Farmer Name</div>
+          <div class="detail-value" id="res-farmer-name">-</div>
+        </div>
+        <div>
+          <div class="detail-label">Procurement Centre</div>
+          <div class="detail-value" id="res-centre-name">-</div>
+        </div>
+        <div>
+          <div class="detail-label">Date & Time Slot</div>
+          <div class="detail-value" id="res-slot">-</div>
+        </div>
+        <div>
+          <div class="detail-label">Crop & Quantity</div>
+          <div class="detail-value" id="res-crop-qty">-</div>
+        </div>
+        <div>
+          <div class="detail-label">Queue Position</div>
+          <div class="detail-value" id="res-queue-pos" style="color: var(--success-color); font-size: 1.2rem;">-</div>
+        </div>
+        <div>
+          <div class="detail-label">Estimated Wait Units</div>
+          <div class="detail-value" id="res-wait-time">-</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="common/common.js"></script>
+  <script src="common/navbar.js"></script>
+  <script>
+    document.getElementById('token-search-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = document.getElementById('token-input').value.trim();
+      
+      try {
+        // We will call the status API endpoint.
+        // For Phase 0, if the server returns 404 since routes aren't built, we can mock it here for UI demonstration
+        const resCard = document.getElementById('search-result');
+        
+        // Try fetch
+        const response = await fetch(`/api/status/${token}`);
+        if (response.ok) {
+          const data = await response.json();
+          renderResult(data);
+        } else {
+          // Mock data for Phase 0 demonstration
+          showToast('Real status API not online yet. Showing demo mock status.', 'info');
+          const mockData = {
+            tokenNumber: token,
+            farmerName: 'Ram Singh',
+            centre: 'Mandi Center - Area A',
+            dateSlot: '2026-09-10 (09:00 - 10:00 AM)',
+            cropQty: 'Wheat - 15 Quintals',
+            queuePosition: 3,
+            waitUnits: '3 Units (15 mins estimated)'
+          };
+          renderResult(mockData);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    function renderResult(data) {
+      const resCard = document.getElementById('search-result');
+      resCard.style.display = 'block';
+      
+      document.getElementById('res-token-id').textContent = 'Token: ' + (data.tokenNumber || data.token || 'T-1002');
+      document.getElementById('res-farmer-name').textContent = data.farmerName || 'Ram Singh';
+      document.getElementById('res-centre-name').textContent = data.centre || 'Mandi Center - District Head';
+      document.getElementById('res-slot').textContent = data.dateSlot || '2026-09-15 10:00-11:00 AM';
+      document.getElementById('res-crop-qty').textContent = data.cropQty || 'Wheat - 10 Quintals';
+      document.getElementById('res-queue-pos').textContent = '#' + (data.queuePosition || '5');
+      document.getElementById('res-wait-time').textContent = data.waitUnits || '2 units (~10 min)';
+    }
+  </script>
+</body>
+</html>

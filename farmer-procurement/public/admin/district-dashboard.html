@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>District Admin Dashboard - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="../common/style.css">
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1.3fr 0.7fr;
+      gap: 2.5rem;
+      margin-top: 2rem;
+    }
+    .centre-status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    .status-active { background-color: rgba(42, 157, 143, 0.15); color: var(--success-color); }
+    .status-inactive { background-color: rgba(230, 57, 70, 0.15); color: var(--danger-color); }
+    @media (max-width: 992px) {
+      .grid-2col {
+        grid-template-columns: 1fr;
+      }
+    }
+    /* Edit Centre Modal Styles */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-fast);
+    }
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .weighing-modal {
+      background: white;
+      width: 100%;
+      max-width: 500px;
+      border-radius: var(--radius-md);
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-20px);
+      transition: transform var(--transition-normal);
+    }
+    .modal-backdrop.open .weighing-modal {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2 style="font-size: 2rem; color: var(--primary-dark);">District Administration Panel</h2>
+        <p style="color: var(--text-muted);">Assigned District: <strong>Indore</strong></p>
+      </div>
+      <div style="display: flex; gap: 1rem;">
+        <div class="card" style="padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 1rem; box-shadow: var(--shadow-sm);">
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 600;">District Total Procured</span>
+            <strong style="font-size: 1.1rem; color: var(--primary-color);" id="district-total-procured-val">0 Quintals</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2col">
+      <!-- Left side: Centres list and capacities -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">Procurement Centres in Indore</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
+                <th style="padding: 1rem 0.5rem;">Centre Name</th>
+                <th style="padding: 1rem 0.5rem;">Storage Cap</th>
+                <th style="padding: 1rem 0.5rem;">Daily Slots Cap</th>
+                <th style="padding: 1rem 0.5rem;">Status</th>
+                <th style="padding: 1rem 0.5rem;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="centres-table-body">
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 1rem 0.5rem; font-weight: 600;">Indore Main Mandi</td>
+                <td style="padding: 1rem 0.5rem;">5,000 Qtl</td>
+                <td style="padding: 1rem 0.5rem;">120 slots/day</td>
+                <td style="padding: 1rem 0.5rem;"><span class="centre-status-badge status-active">Active</span></td>
+                <td style="padding: 1rem 0.5rem;"><button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="showToast('Edit capability scheduled for Phase 2!', 'info')">Edit</button></td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 1rem 0.5rem; font-weight: 600;">Depalpur Sub-centre</td>
+                <td style="padding: 1rem 0.5rem;">2,500 Qtl</td>
+                <td style="padding: 1rem 0.5rem;">60 slots/day</td>
+                <td style="padding: 1rem 0.5rem;"><span class="centre-status-badge status-active">Active</span></td>
+                <td style="padding: 1rem 0.5rem;"><button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="showToast('Edit capability scheduled for Phase 2!', 'info')">Edit</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Right side: Create new Centre -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+          ⚙️ Create New Centre
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
+          Register a new storage Mandi center and specify base capacities for slot assignment.
+        </p>
+
+        <form id="create-centre-form">
+          <div class="form-group">
+            <label class="form-label" for="centre-name">Centre Name</label>
+            <input type="text" id="centre-name" class="form-control" placeholder="e.g. Sanwer Purchase Centre" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="storage-cap">Max Storage Capacity (Quintals)</label>
+            <input type="number" id="storage-cap" class="form-control" placeholder="e.g. 3000" min="100" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="operating-hours">Operating Hours</label>
+            <input type="text" id="operating-hours" class="form-control" value="09:00 AM - 05:00 PM" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="slots-cap">Slots Per Hour (Daily)</label>
+            <input type="number" id="slots-cap" class="form-control" value="15" min="1" required>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Standard base processing rule (5 Qtl = 5 mins) will apply.</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Create Centre</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- Pending Payments Release Panel -->
+  <main style="padding-top: 0; max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">🌾 Pending Payout Clearances</h3>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
+              <th style="padding: 1rem 0.5rem;">Farmer Name</th>
+              <th style="padding: 1rem 0.5rem;">Mobile</th>
+              <th style="padding: 1rem 0.5rem;">Centre</th>
+              <th style="padding: 1rem 0.5rem;">Accepted Qty</th>
+              <th style="padding: 1rem 0.5rem;">Rate/Qtl</th>
+              <th style="padding: 1rem 0.5rem;">Amount</th>
+              <th style="padding: 1rem 0.5rem;">Date</th>
+              <th style="padding: 1rem 0.5rem; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="pending-payments-rows">
+            <!-- Dynamic pending payments list -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Edit Centre Modal -->
+  <div class="modal-backdrop" id="edit-centre-dialog">
+    <div class="weighing-modal">
+      <h3 style="color: var(--primary-dark); margin-bottom: 0.5rem;">⚙️ Edit Centre Configuration</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;" id="edit-modal-subheading">
+        Centre: Indore Main Mandi
+      </p>
+
+      <form id="edit-centre-form">
+        <input type="hidden" id="edit-centre-id">
+        
+        <div class="form-group">
+          <label class="form-label" for="edit-centre-name">Centre Name</label>
+          <input type="text" id="edit-centre-name" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-storage-cap">Max Storage Capacity (Quintals)</label>
+          <input type="number" id="edit-storage-cap" class="form-control" min="100" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-operating-hours">Operating Hours</label>
+          <input type="text" id="edit-operating-hours" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-slots-cap">Slots Per Hour</label>
+          <input type="number" id="edit-slots-cap" class="form-control" min="1" required>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="button" class="btn btn-outline" style="flex: 1;" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="../common/common.js"></script>
+  <script src="../common/navbar.js"></script>
+  <script>
+    const user = getAuthUser();
+    if (!user || user.role !== 'district') {
+      window.location.href = 'login.html';
+    }
+
+    // Personalize dashboard text
+    document.querySelector('main h2 + p').innerHTML = `Assigned District: <strong>${user.district}</strong>`;
+    document.querySelector('.card h3').textContent = `Procurement Centres in ${user.district}`;
+
+    const tbody = document.getElementById('centres-table-body');
+    const paymentsTbody = document.getElementById('pending-payments-rows');
+    const editModal = document.getElementById('edit-centre-dialog');
+
+    let loadedCentres = [];
+
+    // Load Centres and District stats
+    function loadDistrictReport() {
+      fetchAPI('/api/admin/reports/district')
+        .then(data => {
+          document.getElementById('district-total-procured-val').textContent = `${data.totalProcured.toLocaleString()} Quintals`;
+          tbody.innerHTML = '';
+          loadedCentres = data.centres || [];
+
+          if (loadedCentres.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                  No procurement centres registered in this district yet.
+                </td>
+              </tr>
+            `;
+            return;
+          }
+
+          loadedCentres.forEach(centre => {
+            tbody.innerHTML += `
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 1rem 0.5rem; font-weight: 600;">${centre.name}</td>
+                <td style="padding: 1rem 0.5rem;">${centre.storageCapacity.toLocaleString()} Qtl</td>
+                <td style="padding: 1rem 0.5rem;">${centre.slotsPerHour} slots/hour</td>
+                <td style="padding: 1rem 0.5rem;"><span class="centre-status-badge status-active">Active</span></td>
+                <td style="padding: 1rem 0.5rem;">
+                  <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="openEditModal('${centre.id}')">Edit</button>
+                </td>
+              </tr>
+            `;
+          });
+        })
+        .catch(err => console.error('Failed to load district report:', err));
+    }
+
+    // Load Pending Payments
+    function loadPendingPayments() {
+      fetchAPI('/api/admin/payments/pending')
+        .then(payments => {
+          paymentsTbody.innerHTML = '';
+          if (payments.length === 0) {
+            paymentsTbody.innerHTML = `
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                  No pending payment clearances for farmers in your district.
+                </td>
+              </tr>
+            `;
+            return;
+          }
+
+          payments.forEach(p => {
+            const farmerName = p.farmer ? `${p.farmer.firstName} ${p.farmer.lastName}` : 'N/A';
+            const farmerMobile = p.farmer ? p.farmer.mobile : 'N/A';
+            const centreName = p.procurement?.booking?.centre?.name || 'N/A';
+            const dateStr = new Date(p.createdAt).toLocaleDateString();
+
+            paymentsTbody.innerHTML += `
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 1rem 0.5rem; font-weight: 600;">${farmerName}</td>
+                <td style="padding: 1rem 0.5rem;">${farmerMobile}</td>
+                <td style="padding: 1rem 0.5rem;">${centreName}</td>
+                <td style="padding: 1rem 0.5rem; font-weight: 600;">${p.acceptedQuantity} Qtl</td>
+                <td style="padding: 1rem 0.5rem;">₹${p.ratePerQuintal}</td>
+                <td style="padding: 1rem 0.5rem; font-weight: 700; color: var(--primary-color);">₹${p.amount.toLocaleString('en-IN')}</td>
+                <td style="padding: 1rem 0.5rem;">${dateStr}</td>
+                <td style="padding: 1rem 0.5rem; text-align: center;">
+                  <button class="btn btn-sm btn-primary" onclick="releasePayment('${p._id}')">Approve & Release</button>
+                </td>
+              </tr>
+            `;
+          });
+        })
+        .catch(err => console.error('Failed to load pending payments:', err));
+    }
+
+    // Release payment
+    function releasePayment(id) {
+      fetchAPI(`/api/admin/payments/${id}/release`, {
+        method: 'POST'
+      }).then(() => {
+        showToast('Payment payout released successfully!', 'success');
+        loadDistrictReport();
+        loadPendingPayments();
+      }).catch(err => {
+        // Handled in fetchAPI
+      });
+    }
+
+    // Modal Operations
+    function openEditModal(centreId) {
+      const centre = loadedCentres.find(c => c.id === centreId);
+      if (!centre) return;
+
+      document.getElementById('edit-centre-id').value = centre.id;
+      document.getElementById('edit-modal-subheading').textContent = `Centre Code: ${centre.centreId || 'N/A'}`;
+      document.getElementById('edit-centre-name').value = centre.name;
+      document.getElementById('edit-storage-cap').value = centre.storageCapacity;
+      document.getElementById('edit-operating-hours').value = centre.operatingHours;
+      document.getElementById('edit-slots-cap').value = centre.slotsPerHour;
+
+      editModal.classList.add('open');
+    }
+
+    function closeEditModal() {
+      editModal.classList.remove('open');
+    }
+
+    // Handle Edit form submit
+    document.getElementById('edit-centre-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const centreId = document.getElementById('edit-centre-id').value;
+      const body = {
+        name: document.getElementById('edit-centre-name').value,
+        storageCapacity: document.getElementById('edit-storage-cap').value,
+        operatingHours: document.getElementById('edit-operating-hours').value,
+        slotsPerHour: document.getElementById('edit-slots-cap').value
+      };
+
+      fetchAPI(`/api/admin/centres/${centreId}`, {
+        method: 'PATCH',
+        body
+      }).then(() => {
+        showToast('Centre configurations updated!', 'success');
+        closeEditModal();
+        loadDistrictReport();
+      });
+    });
+
+    // Handle Create form submit
+    document.getElementById('create-centre-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const body = {
+        name: document.getElementById('centre-name').value,
+        storageCapacity: document.getElementById('storage-cap').value,
+        operatingHours: document.getElementById('operating-hours').value,
+        slotsPerHour: document.getElementById('slots-cap').value,
+        state: user.state,
+        district: user.district
+      };
+      
+      fetchAPI('/api/admin/centres', {
+        method: 'POST',
+        body
+      }).then(data => {
+        showToast('New procurement centre registered!', 'success');
+        e.target.reset();
+        loadDistrictReport();
+      });
+    });
+
+    // Initial load
+    loadDistrictReport();
+    loadPendingPayments();
+  </script>
+</body>
+</html>

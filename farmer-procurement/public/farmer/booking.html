@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Delivery Slot - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="../common/style.css">
+  <style>
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2.5rem;
+      margin-top: 2rem;
+    }
+    .summary-card {
+      background-color: #f8fafc;
+      border: 1px solid var(--border-color);
+    }
+    .summary-title {
+      font-size: 1.2rem;
+      color: var(--primary-dark);
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+    }
+    .summary-line label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .summary-line span {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .time-slot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .time-slot-btn {
+      border: 1px solid var(--border-color);
+      background: white;
+      padding: 0.75rem 0.5rem;
+      text-align: center;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: var(--transition-fast);
+    }
+    .time-slot-btn:hover {
+      border-color: var(--primary-light);
+      background-color: rgba(44, 110, 89, 0.05);
+    }
+    .time-slot-btn.selected {
+      border-color: var(--primary-color);
+      background-color: var(--primary-color);
+      color: white;
+    }
+    .time-slot-btn.disabled {
+      background-color: #f1f5f9;
+      color: #94a3b8;
+      border-color: #e2e8f0;
+      cursor: not-allowed;
+    }
+
+    /* Mobile responsiveness for booking page */
+    @media (max-width: 992px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .summary-card {
+        position: sticky;
+        top: 80px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .booking-grid {
+        margin-top: 1rem;
+      }
+      .time-slot-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .summary-line {
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .time-slot-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+      }
+      .time-slot-btn {
+        padding: 0.6rem 0.4rem;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <h2 style="font-size: 2rem; color: var(--primary-dark); margin-bottom: 1rem;">Book Delivery Slot</h2>
+    <p style="color: var(--text-muted); margin-bottom: 2rem;">Select your land record, produce type, destination centre, and scheduled time window.</p>
+
+    <div class="booking-grid">
+      <!-- Booking Form -->
+      <div class="card">
+        <form id="booking-form">
+          <!-- Step 1: Land and Produce Selection -->
+          <h3 style="color: var(--primary-color); font-size: 1.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+            1. Land & Crop Details
+          </h3>
+
+          <div class="form-group">
+            <label class="form-label" for="booking-land">Select Registered Land Record</label>
+            <select id="booking-land" class="form-control" required>
+              <option value="">-- Select Land Account --</option>
+              <option value="land-1" data-limit="40">Khasra 284/1 - Palasia Village (Allowed Limit: 40 Quintals)</option>
+              <option value="land-2" data-limit="15">Khasra 192 - Palasia Village (Allowed Limit: 15 Quintals)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="booking-crop">Select Crop Produce</label>
+            <select id="booking-crop" class="form-control" required>
+              <option value="">-- Select Crop --</option>
+              <option value="wheat">Wheat (Kharif)</option>
+              <option value="rice">Rice (Rabi)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="booking-qty">Delivery Quantity (in Quintals)</label>
+            <input type="number" id="booking-qty" class="form-control" placeholder="Enter quantity to book" min="1" step="0.1" required>
+            <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.25rem;" id="qty-limit-hint">
+              Select a land record to view your permissible booking quota.
+            </span>
+          </div>
+
+          <!-- Step 2: Centre and Time Selection -->
+          <h3 style="color: var(--primary-color); font-size: 1.25rem; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+            2. Delivery Schedule
+          </h3>
+
+          <div class="form-group">
+            <label class="form-label" for="booking-district">Select District</label>
+            <select id="booking-district" class="form-control" required>
+              <option value="">-- Select District --</option>
+              <option value="indore">Indore</option>
+              <option value="ujjain">Ujjain</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="booking-centre">Select Procurement Centre</label>
+            <select id="booking-centre" class="form-control" required>
+              <option value="">-- Select Centre --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="booking-date">Select Date</label>
+            <input type="date" id="booking-date" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Available One-Hour Slots</label>
+            <div class="time-slot-grid" id="slots-container">
+              <div class="time-slot-btn" data-time="09:00 - 10:00 AM">09:00 - 10:00</div>
+              <div class="time-slot-btn" data-time="10:00 - 11:00 AM">10:00 - 11:00</div>
+              <div class="time-slot-btn" data-time="11:00 - 12:00 PM">11:00 - 12:00</div>
+              <div class="time-slot-btn disabled" data-time="12:00 - 01:00 PM">12:00 - 01:00 (Full)</div>
+              <div class="time-slot-btn" data-time="02:00 - 03:00 PM">02:00 - 03:00</div>
+              <div class="time-slot-btn" data-time="03:00 - 04:00 PM">03:00 - 04:00</div>
+            </div>
+            <input type="hidden" id="selected-slot" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Confirm & Generate Token</button>
+        </form>
+      </div>
+
+      <!-- Live Booking Review Panel -->
+      <div class="card summary-card" style="height: fit-content;">
+        <h3 class="summary-title">Booking Summary</h3>
+        
+        <div class="summary-line">
+          <label>Land Selected:</label>
+          <span id="sum-land">-</span>
+        </div>
+        <div class="summary-line">
+          <label>Crop Type:</label>
+          <span id="sum-crop">-</span>
+        </div>
+        <div class="summary-line">
+          <label>Requested Quantity:</label>
+          <span id="sum-qty">0.0 Quintals</span>
+        </div>
+        <div class="summary-line">
+          <label>Capacity Units:</label>
+          <span id="sum-units">0 Units</span>
+        </div>
+        <div class="summary-line">
+          <label>Procurement Centre:</label>
+          <span id="sum-centre">-</span>
+        </div>
+        <div class="summary-line">
+          <label>Date & Time Slot:</label>
+          <span id="sum-datetime">-</span>
+        </div>
+        
+        <div style="margin-top: 1.5rem; padding: 1rem; background-color: rgba(27, 77, 62, 0.05); border-radius: var(--radius-sm); border: 1px dashed var(--primary-light); font-size: 0.85rem; color: var(--primary-dark);">
+          <strong>Formula Rule</strong>: Capacity units represent workload (5 quintals = 1 capacity unit). Estimated processing time is 5 minutes per unit.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="../common/common.js"></script>
+  <script src="../common/navbar.js"></script>
+  <script>
+    // Front-end state handler
+    const form = document.getElementById('booking-form');
+    const landSel = document.getElementById('booking-land');
+    const cropSel = document.getElementById('booking-crop');
+    const qtyInput = document.getElementById('booking-qty');
+    const distSel = document.getElementById('booking-district');
+    const centreSel = document.getElementById('booking-centre');
+    const dateInput = document.getElementById('booking-date');
+    const slotInput = document.getElementById('selected-slot');
+    const qtyLimitHint = document.getElementById('qty-limit-hint');
+
+    // Summary elements
+    const sumLand = document.getElementById('sum-land');
+    const sumCrop = document.getElementById('sum-crop');
+    const sumQty = document.getElementById('sum-qty');
+    const sumUnits = document.getElementById('sum-units');
+    const sumCentre = document.getElementById('sum-centre');
+    const sumDatetime = document.getElementById('sum-datetime');
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+
+    // Helper function to get auth token
+    function getToken() {
+      return localStorage.getItem('token');
+    }
+
+    // Check if user is authenticated
+    function checkAuth() {
+      const user = getAuthUser();
+      if (!user || user.role !== 'farmer') {
+        showToast('Authentication required! Please login first.', 'error');
+        window.location.href = 'login.html';
+        return false;
+      }
+      return true;
+    }
+
+    // Load farmer's registered lands from API
+    async function loadLands() {
+      try {
+        const response = await fetch('/api/lands', {
+          headers: {
+            'Authorization': `Bearer ${getToken()}`
+          }
+        });
+        const lands = await response.json();
+
+        // Clear existing options except first
+        landSel.innerHTML = '<option value="">-- Select Land Account --</option>';
+
+        lands.forEach(land => {
+          const remaining = Math.max(0, land.allowedQuantity - land.bookedQuantity);
+          const option = document.createElement('option');
+          option.value = land._id;
+          option.textContent = `Khasra ${land.khasraNumber} - ${land.cropType.toUpperCase()} (Remaining Limit: ${remaining.toFixed(1)} Qtl)`;
+          option.setAttribute('data-limit', remaining);
+          option.setAttribute('data-crop', land.cropType);
+          landSel.appendChild(option);
+        });
+
+        if (lands.length === 0) {
+          showToast('No land records found. Please add land details on your Dashboard first.', 'warning');
+        }
+      } catch (error) {
+        console.error('Failed to load lands:', error);
+        showToast('Failed to load land records. Please refresh the page.', 'error');
+      }
+    }
+
+    // Load states and districts from API
+    async function loadDistricts() {
+      try {
+        // Load states first
+        const statesResponse = await fetch('/api/states');
+        const states = await statesResponse.json();
+
+        // For demo, select the first state (Madhya Pradesh)
+        if (states.length > 0) {
+          const mpState = states.find(s => s.name === 'Madhya Pradesh') || states[0];
+
+          // Load districts for the state
+          const districtsResponse = await fetch(`/api/districts/${mpState.name}`);
+          const districts = await districtsResponse.json();
+
+          distSel.innerHTML = '<option value="">-- Select District --</option>';
+          districts.forEach(district => {
+            const option = document.createElement('option');
+            option.value = district.name.toLowerCase();
+            option.textContent = district.name;
+            distSel.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load districts:', error);
+        showToast('Failed to load districts. Please refresh the page.', 'error');
+      }
+    }
+
+    // Load centres for selected district
+    async function loadCentres(districtName) {
+      try {
+        const response = await fetch(`/api/centres/${districtName}`);
+        const centres = await response.json();
+
+        centreSel.innerHTML = '<option value="">-- Select Centre --</option>';
+
+        centres.forEach(centre => {
+          const option = document.createElement('option');
+          option.value = centre._id;
+          option.textContent = `${centre.name} (Capacity: ${centre.storageCapacity} Qtl)`;
+          centreSel.appendChild(option);
+        });
+
+        if (centres.length === 0) {
+          showToast('No centres available in this district.', 'warning');
+        }
+      } catch (error) {
+        console.error('Failed to load centres:', error);
+        showToast('Failed to load centres. Please try again.', 'error');
+      }
+    }
+
+    // Initialize page - load data
+    async function initPage() {
+      if (!checkAuth()) return;
+      await loadLands();
+      await loadDistricts();
+    }
+
+    // Land limit logic
+    let allowedLimit = 0;
+    landSel.addEventListener('change', () => {
+      const selectedOption = landSel.options[landSel.selectedIndex];
+      if (selectedOption && selectedOption.value) {
+        allowedLimit = parseFloat(selectedOption.getAttribute('data-limit'));
+        const cropType = selectedOption.getAttribute('data-crop');
+
+        qtyLimitHint.textContent = `Permissible limit for this land is ${allowedLimit} Quintals.`;
+        sumLand.textContent = `Khasra ${selectedOption.textContent.split(' - ')[0].replace('Khasra ', '')}`;
+
+        // Auto-select crop type based on land
+        cropSel.value = cropType;
+        sumCrop.textContent = cropType.toUpperCase();
+      } else {
+        allowedLimit = 0;
+        qtyLimitHint.textContent = `Select a land record to view your permissible booking quota.`;
+        sumLand.textContent = '-';
+        sumCrop.textContent = '-';
+      }
+      qtyInput.max = allowedLimit;
+      validateQty();
+    });
+
+    cropSel.addEventListener('change', (e) => {
+      sumCrop.textContent = e.target.value ? e.target.options[e.target.selectedIndex].text : '-';
+    });
+
+    // Quantity validation & unit calculation
+    qtyInput.addEventListener('input', () => {
+      validateQty();
+    });
+
+    function validateQty() {
+      const val = parseFloat(qtyInput.value) || 0;
+      if (allowedLimit > 0 && val > allowedLimit) {
+        qtyInput.setCustomValidity(`Quantity exceeds maximum allowed land limit of ${allowedLimit} Quintals!`);
+        showToast(`Warning: Cannot exceed land limit (${allowedLimit} Qtl)`, 'warning');
+      } else {
+        qtyInput.setCustomValidity('');
+      }
+
+      sumQty.textContent = `${val.toFixed(1)} Quintals`;
+
+      // Calculate capacity units (1 unit per 5 quintals)
+      const units = Math.ceil(val / 5) || 0;
+      sumUnits.textContent = `${units} Unit${units > 1 ? 's' : ''} (${units * 5} mins estimated)`;
+    }
+
+    // District-Centre dynamic filter - now uses API
+    distSel.addEventListener('change', async () => {
+      centreSel.innerHTML = '<option value="">-- Select Centre --</option>';
+      sumCentre.textContent = '-';
+
+      if (distSel.value) {
+        await loadCentres(distSel.value);
+      }
+    });
+
+    centreSel.addEventListener('change', () => {
+      sumCentre.textContent = centreSel.value ? centreSel.options[centreSel.selectedIndex].text : '-';
+    });
+
+    // Slots selections
+    const slotBtns = document.querySelectorAll('.time-slot-btn:not(.disabled)');
+    slotBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        slotBtns.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const selectedVal = btn.getAttribute('data-time');
+        slotInput.value = selectedVal;
+        updateDatetimeSummary();
+      });
+    });
+
+    dateInput.addEventListener('change', () => {
+      updateDatetimeSummary();
+    });
+
+    function updateDatetimeSummary() {
+      const dateVal = dateInput.value;
+      const slotVal = slotInput.value;
+      if (dateVal && slotVal) {
+        sumDatetime.textContent = `${dateVal} (${slotVal})`;
+      } else if (dateVal) {
+        sumDatetime.textContent = `${dateVal} (No slot chosen)`;
+      } else {
+        sumDatetime.textContent = '-';
+      }
+    }
+
+    // Submit booking
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Check if user is authenticated
+      if (!checkAuth()) return;
+
+      if (!slotInput.value) {
+        showToast('Please select an available delivery hour slot!', 'warning');
+        return;
+      }
+
+      // Validate all required fields
+      if (!landSel.value || !cropSel.value || !qtyInput.value || !distSel.value || !centreSel.value || !dateInput.value) {
+        showToast('Please fill in all required fields!', 'warning');
+        return;
+      }
+
+      // Gather all form data for API call
+      const formData = {
+        landId: landSel.value,
+        cropType: cropSel.value,
+        quantity: parseFloat(qtyInput.value),
+        district: distSel.value,
+        centreId: centreSel.value,
+        date: dateInput.value,
+        timeWindow: slotInput.value
+      };
+
+      try {
+        // Call backend API to create booking
+        const response = await fetchAPI('/api/bookings', {
+          method: 'POST',
+          body: formData
+        });
+
+        // Booking successful - show confirmation
+        showToast(`Booking confirmed! Token: ${response.booking.tokenNumber}, Queue Position: #${response.booking.queuePosition}`, 'success');
+
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 2500);
+
+      } catch (error) {
+        // Booking failed - show error message
+        showToast(error.message || 'Booking failed. Please try again.', 'error');
+      }
+    });
+
+    // Initialize on page load
+    initPage();
+  </script>
+</body>
+</html>

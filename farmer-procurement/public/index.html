@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Procurement Platform</title>
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="common/style.css">
+  <style>
+    /* Homepage Specific Styles */
+    .hero-container {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2rem;
+      align-items: center;
+    }
+    .hero-text h1 {
+      font-size: 2.8rem;
+      color: var(--text-white);
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+    }
+    .hero-text p {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 2rem;
+      max-width: 550px;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: var(--accent-light);
+      padding: 0.4rem 1rem;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .hero-illustration {
+      font-size: 8rem;
+      text-align: center;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-15px); }
+      100% { transform: translateY(0px); }
+    }
+
+    /* How It Works Section */
+    .section-title {
+      text-align: center;
+      font-size: 2.2rem;
+      margin: 4rem 0 2rem 0;
+      position: relative;
+    }
+    .section-title::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 4px;
+      background-color: var(--accent-color);
+      margin: 0.75rem auto 0 auto;
+      border-radius: 2px;
+    }
+    .steps-container {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .step-card {
+      position: relative;
+      text-align: center;
+      padding: 1.5rem 1rem;
+    }
+    .step-number {
+      width: 45px;
+      height: 45px;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin: 0 auto 1rem auto;
+      box-shadow: 0 4px 10px rgba(27, 77, 62, 0.2);
+    }
+    .step-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary-dark);
+    }
+    .step-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .step-card:not(:last-child)::after {
+      content: '➔';
+      position: absolute;
+      right: -15%;
+      top: 30px;
+      font-size: 1.5rem;
+      color: var(--accent-color);
+    }
+
+    /* Benefits Section */
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .benefit-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .benefit-icon {
+      font-size: 2.2rem;
+      color: var(--primary-light);
+    }
+    .benefit-card h3 {
+      font-size: 1.25rem;
+    }
+    .benefit-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Notice & Info */
+    .info-container {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2rem;
+      margin-top: 4rem;
+    }
+    .notice-board {
+      background-color: #fff9f2;
+      border-left: 5px solid var(--accent-color);
+    }
+    .notice-title {
+      color: #854d0e;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .notice-list {
+      list-style-type: none;
+    }
+    .notice-list li {
+      margin-bottom: 0.75rem;
+      padding-left: 1.25rem;
+      position: relative;
+      font-size: 0.95rem;
+    }
+    .notice-list li::before {
+      content: '•';
+      color: var(--accent-color);
+      font-size: 1.5rem;
+      position: absolute;
+      left: 0;
+      top: -4px;
+    }
+
+    /* Contact Quick Form */
+    .contact-card {
+      background-color: var(--primary-dark);
+      color: white;
+    }
+    .contact-card h3 {
+      color: var(--accent-light);
+      margin-bottom: 0.5rem;
+    }
+    .contact-card p {
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+    .contact-card input, .contact-card textarea {
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+    .contact-card input::placeholder, .contact-card textarea::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+    .contact-card input:focus, .contact-card textarea:focus {
+      background-color: rgba(255, 255, 255, 0.15);
+      border-color: var(--accent-light);
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 992px) {
+      .hero-container {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .hero-text p {
+        margin: 0 auto 2rem auto;
+      }
+      .hero-buttons {
+        justify-content: center;
+      }
+      .hero-illustration {
+        display: none;
+      }
+      .steps-container {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .step-card:nth-child(3)::after {
+        display: none;
+      }
+    }
+    @media (max-width: 768px) {
+      .steps-container {
+        grid-template-columns: 1fr;
+      }
+      .step-card::after {
+        display: none !important;
+      }
+      .info-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation (Dynamically Injected) -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero Section -->
+    <section class="hero-gradient">
+      <div class="hero-container">
+        <div class="hero-text">
+          <span class="hero-badge">🚜 digital Mandi initiative</span>
+          <h1>Streamline Your Crop Procurement Delivery</h1>
+          <p>Book crop procurement slots online from the comfort of your home. Get guaranteed token numbers, live queue updates, and track payment processing easily.</p>
+          <div class="hero-buttons">
+            <a href="farmer/login.html" class="btn btn-accent">📅 Book Your Slot</a>
+            <a href="status.html" class="btn btn-outline" style="border-color: white; color: white;">🔍 Check Status</a>
+          </div>
+        </div>
+        <div class="hero-illustration">🌾</div>
+      </div>
+    </section>
+
+    <!-- How It Works Pipeline -->
+    <section>
+      <h2 class="section-title">How It Works</h2>
+      <div class="steps-container">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3>Farmer Registration</h3>
+          <p>Sign up using your mobile number and basic verification.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3>Land Verification</h3>
+          <p>Sync registered land records and see permitted crop yields.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3>Book Time-Slot</h3>
+          <p>Choose an available procurement centre date and hour.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">4</div>
+          <h3>Queue Token</h3>
+          <p>Receive your unique token number and queue estimate.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">5</div>
+          <h3>Procure & Pay</h3>
+          <p>Deliver produce, operator weighs crop, payment triggers.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section style="margin-top: 4rem;">
+      <h2 class="section-title">Key Platform Benefits</h2>
+      <div class="benefits-grid">
+        <div class="card benefit-card">
+          <div class="benefit-icon">⏱️</div>
+          <h3>Minimal Waiting</h3>
+          <p>Arrive exactly during your one-hour slot to skip long tractor traffic lines.</p>
+        </div>
+        <div class="card benefit-card">
+          <div class="benefit-icon">📊</div>
+          <h3>Live Queue Status</h3>
+          <p>Monitor live queue positions directly from your phone before leaving home.</p>
+        </div>
+        <div class="card benefit-card">
+          <div class="benefit-icon">⚖️</div>
+          <h3>Transparent Weighing</h3>
+          <p>Accurate digital weights logged instantly onto the system with receipt SMS.</p>
+        </div>
+        <div class="card benefit-card">
+          <div class="benefit-icon">💳</div>
+          <h3>Direct Payments</h3>
+          <p>Track your crop payment processing status directly in your dashboard.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notices and Quick Contact Form -->
+    <section class="info-container">
+      <div class="card notice-board">
+        <h3 class="notice-title">📢 Important Announcements</h3>
+        <ul class="notice-list">
+          <li>Kharif procurement registrations are open. Register by September 30, 2026.</li>
+          <li>Please bring original Aadhaar Card and Land Registration documents during verification.</li>
+          <li>In case of slot cancellation, book at least 24 hours in advance to release capacity.</li>
+          <li>Weighing tolerance is limited to state regulations. Please review clean grain moisture thresholds.</li>
+        </ul>
+      </div>
+
+      <div class="card contact-card">
+        <h3>Contact Helpdesk</h3>
+        <p>Send your queries directly to our technical support team.</p>
+        <form id="quick-contact-form">
+          <div class="form-group">
+            <input type="text" class="form-control" placeholder="Your Name" required>
+          </div>
+          <div class="form-group">
+            <input type="email" class="form-control" placeholder="Email Address" required>
+          </div>
+          <div class="form-group">
+            <textarea class="form-control" rows="3" placeholder="How can we help you?" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-accent" style="width: 100%;">Send Message</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer (Dynamically Injected) -->
+  <div id="footer"></div>
+
+  <!-- Common Script Utilities -->
+  <script src="common/common.js"></script>
+  <script src="common/navbar.js"></script>
+  <script>
+    // Quick Contact Form Handler
+    document.getElementById('quick-contact-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      showToast('Thank you for reaching out. A support ticket has been registered!', 'success');
+      e.target.reset();
+    });
+  </script>
+</body>
+</html>

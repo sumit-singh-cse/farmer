@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support & Contact - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="common/style.css">
+  <style>
+    .support-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      margin-top: 2rem;
+    }
+    .faq-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .faq-item {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
+    }
+    .faq-item h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary-color);
+    }
+    .faq-item p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    @media (max-width: 768px) {
+      .support-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <h2 style="font-size: 2.2rem; margin-bottom: 1rem; text-align: center;">Help & Support Center</h2>
+    <p style="text-align: center; color: var(--text-muted); max-width: 600px; margin: 0 auto 3rem auto;">
+      Have questions about booking a slot, verifying your land records, or receiving payments? Find answers below or contact our dedicated helpdesk.
+    </p>
+
+    <div class="support-grid">
+      <!-- FAQ Section -->
+      <div class="faq-section">
+        <h2 style="font-size: 1.5rem; color: var(--primary-dark); margin-bottom: 1rem;">Frequently Asked Questions</h2>
+        
+        <div class="faq-item">
+          <h3>How do I register on the platform?</h3>
+          <p>Click on 'Farmer Login' in the top menu and select 'New Registration'. Fill in your mobile number, verify it using OTP, enter your Aadhaar reference number and address, and set a password.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Can I book multiple slots?</h3>
+          <p>Yes. Based on your registered land area and allowed crop produce limit, you can book slots across different dates/times until your total allowed quantity limit is reached.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>What if I arrive late to my scheduled slot?</h3>
+          <p>Your booking remains valid for the selected date, but your queue position might be reassigned to minimize center congestion. It is highly recommended to arrive 10 minutes before your slot.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>How is the final crop payment calculated?</h3>
+          <p>Payments are calculated using the <strong>actual weighed accepted quantity</strong> at the center (not the expected quantity booked online) times the state-approved minimum support price (MSP).</p>
+        </div>
+      </div>
+
+      <!-- Contact Support Form -->
+      <div>
+        <div class="card">
+          <h2 style="font-size: 1.5rem; color: var(--primary-dark); margin-bottom: 1rem;">Submit a Ticket</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Fill out the details below and our support team will get back to you within 24 working hours.
+          </p>
+          <form id="support-ticket-form">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" placeholder="Enter your name" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mobile Number</label>
+              <input type="tel" class="form-control" placeholder="10-digit mobile number" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Issue Category</label>
+              <select class="form-control" required>
+                <option value="">-- Select Category --</option>
+                <option value="registration">Registration / Login Issues</option>
+                <option value="booking">Slot Booking / Token Errors</option>
+                <option value="weighing">Weighing / Quantity Mismatch</option>
+                <option value="payment">Payment Status Delays</option>
+                <option value="other">Other Issues</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Describe your issue</label>
+              <textarea class="form-control" rows="4" placeholder="Describe what happened in detail..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Ticket</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="common/common.js"></script>
+  <script src="common/navbar.js"></script>
+  <script>
+    document.getElementById('support-ticket-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      showToast('Support ticket submitted successfully! Ticket ID: PK-' + Math.floor(Math.random() * 900000 + 100000), 'success');
+      e.target.reset();
+    });
+  </script>
+</body>
+</html>

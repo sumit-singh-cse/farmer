@@ -1,0 +1,624 @@
+/* Import Modern Typography */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+/* CSS VARIABLES - Premium Agriculture Theme */
+:root {
+  --primary-color: #1b4d3e;          /* Rich forest green */
+  --primary-light: #2c6e59;          /* Slightly lighter green */
+  --primary-dark: #123329;           /* Deep dark green */
+  --accent-color: #d4a373;           /* Warm earthy sand/gold */
+  --accent-light: #e9c46a;           /* Soft golden glow */
+  
+  --bg-main: #f4f7f6;                /* Extremely soft minty-grey background */
+  --bg-card: #ffffff;                /* Pure white cards */
+  --text-main: #2b2d42;              /* Dark charcoal for high contrast readability */
+  --text-muted: #6c757d;             /* Mid-tone grey for descriptions */
+  --text-white: #ffffff;
+  
+  --danger-color: #e63946;           /* Refined crimson red */
+  --success-color: #2a9d8f;          /* Elegant teal-green */
+  --warning-color: #f4a261;          /* Earthy orange */
+  
+  --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(27, 77, 62, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.08);
+  
+  /* Borders & Radius */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --border-color: #e2e8f0;
+  
+  /* Transitions */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset and Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+main {
+  flex: 1;
+  padding: 2.5rem 1.5rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: var(--primary-dark);
+  line-height: 1.25;
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+a:hover {
+  color: var(--accent-color);
+}
+
+/* Header & Navbar */
+header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 800;
+  font-size: 1.4rem;
+  color: var(--primary-color);
+}
+
+.logo-icon {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: var(--text-white);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-menu {
+  display: flex;
+  gap: 1.5rem;
+  list-style: none;
+  align-items: center;
+}
+
+.nav-link {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-main);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.nav-link:hover, .nav-link.active {
+  background-color: rgba(27, 77, 62, 0.08);
+  color: var(--primary-color);
+}
+
+.nav-btn-cta {
+  background-color: var(--primary-color);
+  color: var(--text-white) !important;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(27, 77, 62, 0.2);
+}
+
+.nav-btn-cta:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(27, 77, 62, 0.3);
+}
+
+/* Mobile Nav Toggle */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* Footer Section */
+footer {
+  background-color: var(--primary-dark);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 3rem 1.5rem 1.5rem 1.5rem;
+  margin-top: auto;
+  border-top: 4px solid var(--accent-color);
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 3rem;
+  padding-bottom: 2rem;
+}
+
+.footer-logo {
+  font-weight: 700;
+  color: var(--text-white);
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.footer-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: 360px;
+}
+
+.footer-header {
+  color: var(--accent-light);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1.25rem;
+  font-weight: 600;
+}
+
+.footer-links {
+  list-style: none;
+}
+
+.footer-links li {
+  margin-bottom: 0.75rem;
+}
+
+.footer-links a {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.footer-links a:hover {
+  color: var(--accent-light);
+  padding-left: 4px;
+}
+
+.footer-bottom {
+  max-width: 1200px;
+  margin: 0 auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.footer-demo-badge {
+  display: inline-block;
+  background-color: rgba(212, 163, 115, 0.15);
+  color: var(--accent-light);
+  border: 1px solid rgba(212, 163, 115, 0.3);
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+/* Common Layout Components */
+.card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 2rem;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Gradients and Section Styles */
+.hero-gradient {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+  color: var(--text-white);
+  border-radius: var(--radius-lg);
+  padding: 4rem 3rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.hero-gradient::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 80%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+  transform: rotate(-15deg);
+  pointer-events: none;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--primary-dark);
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  color: var(--text-main);
+  background-color: #fafbfc;
+  transition: var(--transition-fast);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  background-color: var(--text-white);
+  box-shadow: 0 0 0 3px rgba(44, 110, 89, 0.15);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.75rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition-fast);
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--text-white);
+  box-shadow: 0 4px 12px rgba(27, 77, 62, 0.15);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(27, 77, 62, 0.25);
+}
+
+.btn-accent {
+  background-color: var(--accent-color);
+  color: var(--primary-dark);
+  box-shadow: 0 4px 12px rgba(212, 163, 115, 0.2);
+}
+
+.btn-accent:hover {
+  background-color: #dfb285;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(212, 163, 115, 0.3);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+}
+
+.btn-outline:hover {
+  background-color: var(--primary-color);
+  color: var(--text-white);
+  transform: translateY(-2px);
+}
+
+/* Alert Notification Banner / Toasts */
+.alert-toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 10000;
+  transform: translateY(150%);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-left: 4px solid var(--primary-color);
+}
+
+.alert-toast.show {
+  transform: translateY(0);
+}
+
+.alert-toast.success {
+  border-left-color: var(--success-color);
+}
+
+.alert-toast.error {
+  border-left-color: var(--danger-color);
+}
+
+.alert-toast.warning {
+  border-left-color: var(--warning-color);
+}
+
+/* ======================================== */
+/* RESPONSIVE DESIGN - MOBILE OPTIMIZATION */
+/* ======================================== */
+
+/* Large tablets and smaller desktops */
+@media (max-width: 1200px) {
+  main {
+    padding: 2rem 1.5rem;
+  }
+  .navbar-container {
+    max-width: 100%;
+  }
+}
+
+/* Tablets and large phones */
+@media (max-width: 992px) {
+  .footer-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+
+  main {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .card {
+    padding: 1.5rem;
+  }
+
+  /* Responsive tables */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hero-gradient {
+    padding: 2.5rem 2rem;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 768px) {
+  body {
+    font-size: 0.95rem;
+  }
+
+  .navbar-container {
+    padding: 0.75rem 1rem;
+  }
+
+  .nav-menu {
+    display: none; /* Collapsed by default on mobile, handled in navbar.js */
+  }
+
+  .nav-toggle {
+    display: block;
+  }
+
+  .logo-link {
+    font-size: 1.2rem;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  main {
+    padding: 1.25rem 1rem;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .hero-gradient {
+    padding: 2rem 1.25rem;
+    text-align: center;
+  }
+
+  .hero-gradient .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero-gradient .btn {
+    width: 100%;
+  }
+
+  .card {
+    padding: 1.25rem;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Responsive form elements */
+  .form-control {
+    padding: 0.7rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    padding: 0.7rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* Responsive table improvements */
+  table th, table td {
+    padding: 0.5rem 0.4rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  /* Mobile spacing adjustments */
+  h1 {
+    font-size: 1.5rem;
+  }
+  h2 {
+    font-size: 1.3rem;
+  }
+  h3 {
+    font-size: 1.1rem;
+  }
+}
+
+/* Small phones (320px - 480px) */
+@media (max-width: 480px) {
+  body {
+    font-size: 0.9rem;
+  }
+
+  main {
+    padding: 1rem 0.75rem;
+  }
+
+  .navbar-container {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .card {
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .hero-gradient {
+    padding: 1.5rem 1rem;
+  }
+
+  .footer-content {
+    padding: 0.5rem 0 1rem 0;
+  }
+
+  footer {
+    padding: 2rem 0.75rem 1rem 0.75rem;
+  }
+
+  .footer-text {
+    max-width: 100%;
+  }
+
+  /* Adjust button sizes for touch */
+  .btn {
+    padding: 0.75rem 1rem;
+    min-height: 44px; /* Minimum touch target size */
+    font-size: 0.95rem;
+  }
+
+  /* Alert toast positioning */
+  .alert-toast {
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+    padding: 0.9rem;
+  }
+
+  /* Responsive table cell text wrapping */
+  table td, table th {
+    font-size: 0.8rem;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 360px) {
+  .navbar-container {
+    padding: 0.5rem;
+  }
+
+  .logo-link {
+    font-size: 1rem;
+  }
+
+  .btn {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  main {
+    padding: 0.75rem 0.5rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  header, footer, .btn, .alert-toast {
+    display: none !important;
+  }
+
+  main {
+    padding: 0;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ccc;
+  }
+}

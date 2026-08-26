@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="../common/style.css">
+  <style>
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 2.5rem;
+      margin-top: 2rem;
+    }
+    .profile-card-left {
+      text-align: center;
+    }
+    .avatar-upload-container {
+      position: relative;
+      width: 150px;
+      height: 150px;
+      margin: 0 auto 1.5rem auto;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 4px solid var(--primary-light);
+      box-shadow: var(--shadow-md);
+    }
+    .avatar-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .avatar-upload-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 0.25rem 0;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .profile-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <h2 style="font-size: 2rem; color: var(--primary-dark); margin-bottom: 2rem;">Farmer Profile</h2>
+
+    <div class="profile-grid">
+      <!-- Left side: Picture & Quick details -->
+      <div class="card profile-card-left">
+        <div class="avatar-upload-container">
+          <img src="https://images.unsplash.com/photo-1595273670150-db0c38090967?auto=format&fit=crop&q=80&w=200" alt="Farmer Profile Image" class="avatar-preview" id="profile-img-preview">
+          <label for="avatar-file-input" class="avatar-upload-overlay">Change Image</label>
+        </div>
+        <input type="file" id="avatar-file-input" style="display: none;" accept="image/*">
+        
+        <h3 style="color: var(--primary-dark); margin-bottom: 0.25rem;" id="profile-display-name">Ram Singh</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Registered Farmer</p>
+        
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem; text-align: left;">
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; display: block;">Masked Aadhaar Number</span>
+          <strong style="color: var(--primary-dark);">XXXX-XXXX-4938</strong>
+        </div>
+      </div>
+
+      <!-- Right side: Edit Details Form -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+          Edit Personal Details
+        </h3>
+        
+        <form id="profile-edit-form">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="first-name">First Name</label>
+              <input type="text" id="first-name" class="form-control" value="Ram" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="last-name">Last Name</label>
+              <input type="text" id="last-name" class="form-control" value="Singh" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="mobile">Registered Mobile</label>
+            <input type="tel" id="mobile" class="form-control" value="9876543210" disabled style="background-color: #f1f5f9;">
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Mobile numbers cannot be changed directly online.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="address">Full Address</label>
+            <input type="text" id="address" class="form-control" value="Village Pipaliya, Post Palasia, Indore District" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="state">State</label>
+              <input type="text" id="state" class="form-control" value="Madhya Pradesh" disabled style="background-color: #f1f5f9;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="district">District</label>
+              <input type="text" id="district" class="form-control" value="Indore" disabled style="background-color: #f1f5f9;">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Save Profile Changes</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="../common/common.js"></script>
+  <script src="../common/navbar.js"></script>
+  <script>
+    const fileInput = document.getElementById('avatar-file-input');
+    const imgPreview = document.getElementById('profile-img-preview');
+    const profileForm = document.getElementById('profile-edit-form');
+    
+    // Verify session
+    const sessionUser = getAuthUser();
+    if (!sessionUser || sessionUser.role !== 'farmer') {
+      window.location.href = 'login.html';
+    }
+
+    // Load Profile details on load
+    function loadProfile() {
+      fetchAPI('/api/profile')
+        .then(profile => {
+          document.getElementById('first-name').value = profile.firstName || '';
+          document.getElementById('last-name').value = profile.lastName || '';
+          document.getElementById('mobile').value = profile.mobile || '';
+          document.getElementById('address').value = profile.address || '';
+          document.getElementById('state').value = profile.state || '';
+          document.getElementById('district').value = profile.district || '';
+          
+          document.getElementById('profile-display-name').textContent = `${profile.firstName} ${profile.lastName}`;
+          document.querySelector('.profile-card-left strong').textContent = profile.aadhaarRef || 'XXXX-XXXX-XXXX';
+          
+          if (profile.profileImage) {
+            imgPreview.src = profile.profileImage;
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showToast('Failed to load profile details from server', 'error');
+        });
+    }
+
+    // Run load profile
+    loadProfile();
+
+    // Handle Profile Image Upload
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+          showToast('File size must be under 2MB!', 'warning');
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('avatar', file);
+        
+        const token = localStorage.getItem('token');
+        fetch('/api/profile/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        })
+        .then(res => {
+          if (!res.ok) throw new Error('Upload failed');
+          return res.json();
+        })
+        .then(data => {
+          if (data.status === 'success') {
+            imgPreview.src = data.imageUrl;
+            
+            // Save updated image path in local storage session
+            const user = getAuthUser();
+            user.profileImage = data.imageUrl;
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            showToast('Profile image uploaded successfully!', 'success');
+          } else {
+            showToast(data.error || 'Upload failed', 'error');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showToast('Image upload failed', 'error');
+        });
+      }
+    });
+
+    // Handle Profile Details Update Form
+    profileForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const body = {
+        firstName: document.getElementById('first-name').value,
+        lastName: document.getElementById('last-name').value,
+        address: document.getElementById('address').value
+      };
+      
+      fetchAPI('/api/profile', {
+        method: 'PATCH',
+        body
+      }).then(data => {
+        showToast('Profile updated successfully!', 'success');
+        
+        // Update user name in localStorage session to update navbar greeting
+        const user = getAuthUser();
+        user.name = data.user.name;
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Reload details
+        loadProfile();
+      }).catch(err => {
+        // Handled in fetchAPI
+      });
+    });
+  </script>
+</body>
+</html>

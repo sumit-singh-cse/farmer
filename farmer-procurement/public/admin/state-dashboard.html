@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>State Admin Dashboard - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="../common/style.css">
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      padding: 1.5rem;
+    }
+    .stat-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--primary-color);
+      margin: 0.5rem 0;
+    }
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+    @media (max-width: 992px) {
+      .stats-row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 768px) {
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+      .grid-2col {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2 style="font-size: 2rem; color: var(--primary-dark);">State Administration Dashboard</h2>
+        <p style="color: var(--text-muted);">Monitoring Grain Procurement & Storage for state: <strong id="state-name-display">Madhya Pradesh</strong></p>
+      </div>
+      <button class="btn btn-primary" id="export-report-btn">📥 Export State Report</button>
+    </div>
+
+    <!-- Stats summary Row -->
+    <div class="stats-row">
+      <div class="card stat-card">
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Total Grain Procured</span>
+        <div class="stat-val" id="stat-total-procured">0 Qtl</div>
+        <span style="font-size: 0.8rem; color: var(--success-color);">Real-time count</span>
+      </div>
+      <div class="card stat-card">
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Storage Utilization</span>
+        <div class="stat-val" id="stat-storage-util">0%</div>
+        <div style="width: 100%; height: 6px; background-color: #e2e8f0; border-radius: 3px; margin-top: 0.5rem; overflow: hidden;">
+          <div id="stat-storage-progress" style="width: 0%; height: 100%; background-color: var(--primary-color);"></div>
+        </div>
+      </div>
+      <div class="card stat-card">
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Total Payments Released</span>
+        <div class="stat-val" id="stat-payments-released">₹0</div>
+        <span style="font-size: 0.8rem; color: var(--success-color);" id="stat-released-pct">0% processed</span>
+      </div>
+      <div class="card stat-card">
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Pending Clearances</span>
+        <div class="stat-val" id="stat-payments-pending">₹0</div>
+        <span style="font-size: 0.8rem; color: var(--danger-color);">Needs verification</span>
+      </div>
+    </div>
+
+    <!-- Details Grid -->
+    <div class="grid-2col">
+      <!-- District Breakdown -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">District Wise Operations</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
+                <th style="padding: 0.75rem 0.5rem;">District Name</th>
+                <th style="padding: 0.75rem 0.5rem;">Centres</th>
+                <th style="padding: 0.75rem 0.5rem;">Procured (Qtl)</th>
+                <th style="padding: 0.75rem 0.5rem;">Released Amt</th>
+                <th style="padding: 0.75rem 0.5rem;">Pending Amt</th>
+              </tr>
+            </thead>
+            <tbody id="district-rows">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Live Monitoring Notice & Top Performing Centres -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">Active Alerts & Logs</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="border-left: 4px solid var(--warning-color); padding-left: 1rem;">
+            <strong style="font-size: 0.9rem; color: #b45309;">Storage Limit Warning</strong>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Ujjain Central Mandi is at 92% capacity. Allocate backup warehouses.</p>
+          </div>
+
+          <div style="border-left: 4px solid var(--primary-light); padding-left: 1rem;">
+            <strong style="font-size: 0.9rem; color: var(--primary-color);">System Audit Log</strong>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">District administrator IND-D01 added a new procurement sub-centre: Depalpur.</p>
+          </div>
+
+          <div style="border-left: 4px solid var(--success-color); padding-left: 1rem;">
+            <strong style="font-size: 0.9rem; color: #047857;">Payment Reconciliation Done</strong>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">SBI direct-transfer settled 1,480 farmer payouts for Wheat procurement.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="../common/common.js"></script>
+  <script src="../common/navbar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = getAuthUser();
+      if (!user || user.role !== 'state') {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      document.getElementById('state-name-display').textContent = user.state || 'Madhya Pradesh';
+
+      let reportData = null;
+
+      try {
+        const data = await fetchAPI('/api/admin/reports/state');
+        reportData = data;
+
+        // Populate cards
+        document.getElementById('stat-total-procured').textContent = `${data.totalProcured.toLocaleString()} Qtl`;
+        
+        const utilPct = data.totalStorage > 0 ? ((data.totalProcured / data.totalStorage) * 100).toFixed(1) : 0;
+        document.getElementById('stat-storage-util').textContent = `${utilPct}%`;
+        document.getElementById('stat-storage-progress').style.width = `${Math.min(utilPct, 100)}%`;
+
+        document.getElementById('stat-payments-released').textContent = `₹${data.totalReleased.toLocaleString('en-IN')}`;
+        document.getElementById('stat-payments-pending').textContent = `₹${data.totalPending.toLocaleString('en-IN')}`;
+
+        const totalPay = data.totalReleased + data.totalPending;
+        const processPct = totalPay > 0 ? ((data.totalReleased / totalPay) * 100).toFixed(1) : 0;
+        document.getElementById('stat-released-pct').textContent = `${processPct}% processed`;
+
+        // Populate district breakdown table
+        const tbody = document.getElementById('district-rows');
+        tbody.innerHTML = '';
+
+        if (!data.districts || data.districts.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                No district records found.
+              </td>
+            </tr>
+          `;
+        } else {
+          data.districts.forEach(d => {
+            tbody.innerHTML += `
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${d.name}</td>
+                <td style="padding: 0.75rem 0.5rem;">${d.centresCount} Centres</td>
+                <td style="padding: 0.75rem 0.5rem;">${d.procured.toLocaleString()} Qtl</td>
+                <td style="padding: 0.75rem 0.5rem; color: var(--success-color); font-weight: 600;">₹${d.released.toLocaleString('en-IN')}</td>
+                <td style="padding: 0.75rem 0.5rem; color: var(--warning-color); font-weight: 600;">₹${d.pending.toLocaleString('en-IN')}</td>
+              </tr>
+            `;
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load state report:', err);
+      }
+
+      // Handle CSV export
+      document.getElementById('export-report-btn').addEventListener('click', () => {
+        if (!reportData) {
+          showToast('No report data available to export', 'error');
+          return;
+        }
+
+        let csvContent = `State Procurement and Payment Report\r\n`;
+        csvContent += `State,${reportData.state}\r\n`;
+        csvContent += `Generated,${new Date().toLocaleDateString()}\r\n\r\n`;
+        csvContent += `Summary:\r\n`;
+        csvContent += `Total Centres,${reportData.centresCount}\r\n`;
+        csvContent += `Total Grain Procured (Qtl),${reportData.totalProcured}\r\n`;
+        csvContent += `Total Storage Capacity (Qtl),${reportData.totalStorage}\r\n`;
+        csvContent += `Total Payments Released (INR),${reportData.totalReleased}\r\n`;
+        csvContent += `Total Payments Pending (INR),${reportData.totalPending}\r\n\r\n`;
+        csvContent += `District Breakdown:\r\n`;
+        csvContent += `District Name,Centres Count,Total Procured (Qtl),Released Payments (INR),Pending Payments (INR)\r\n`;
+
+        reportData.districts.forEach(d => {
+          csvContent += `"${d.name}",${d.centresCount},${d.procured},${d.released},${d.pending}\r\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `state_report_${reportData.state.replace(/\s+/g, '_')}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('CSV report downloaded successfully', 'success');
+      });
+    });
+  </script>
+</body>
+</html>

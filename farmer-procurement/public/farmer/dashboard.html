@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Dashboard - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="../common/style.css">
+  <link rel="stylesheet" href="farmer.css">
+  <style>
+    @media (max-width: 768px) {
+      #land-holdings-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbar"></div>
+
+  <!-- Main Content -->
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <div>
+        <h2 style="font-size: 2rem; color: var(--primary-dark);" id="welcome-title">Namaste, Farmer!</h2>
+        <p style="color: var(--text-muted);">Manage your crop delivery bookings and check real-time statuses.</p>
+      </div>
+      <a href="booking.html" class="btn btn-primary">📅 Book New Slot</a>
+    </div>
+
+    <!-- Active Booking Panel -->
+    <div class="card" id="active-booking-panel" style="border-left: 6px solid var(--primary-light); margin-bottom: 2.5rem;">
+      <h3 style="color: var(--primary-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        🎫 Active Slot Booking
+      </h3>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+        <div>
+          <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: block;">Token Number</span>
+          <strong style="font-size: 1.25rem; color: var(--primary-dark);" id="active-token">T-1002</strong>
+        </div>
+        <div>
+          <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: block;">Procurement Centre</span>
+          <span style="font-size: 1rem; font-weight: 700;" id="active-centre">Ujjain Krishi Mandi</span>
+        </div>
+        <div>
+          <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: block;">Scheduled Date & Time</span>
+          <span style="font-size: 1rem; font-weight: 700;" id="active-datetime">2026-09-12 (10:00 - 11:00 AM)</span>
+        </div>
+        <div>
+          <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: block;">Queue Position</span>
+          <strong style="font-size: 1.25rem; color: var(--success-color);" id="active-queue">#4 (approx. 20 min wait)</strong>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); display: flex; gap: 2rem;">
+        <div>
+          <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Crop Type:</span>
+          <span style="font-weight: 700; margin-left: 0.25rem;" id="active-crop">Wheat</span>
+        </div>
+        <div>
+          <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Booked Quantity:</span>
+          <span style="font-weight: 700; margin-left: 0.25rem;" id="active-qty">15 Quintals</span>
+        </div>
+        <div>
+          <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Capacity Load:</span>
+          <span style="font-weight: 700; margin-left: 0.25rem;" id="active-units">3 Capacity Units</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Land Holdings Section -->
+    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2rem; margin-bottom: 2.5rem;" id="land-holdings-grid">
+      <!-- Land Listings -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+          🌾 My Verified Land Holdings
+        </h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
+                <th style="padding: 0.75rem 0.5rem;">Khasra No.</th>
+                <th style="padding: 0.75rem 0.5rem;">Area (Ha)</th>
+                <th style="padding: 0.75rem 0.5rem;">Crop Type</th>
+                <th style="padding: 0.75rem 0.5rem;">Quota Limit</th>
+                <th style="padding: 0.75rem 0.5rem;">Booked Qty</th>
+              </tr>
+            </thead>
+            <tbody id="land-rows">
+              <!-- Dynamically loaded -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Add New Land -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+          ⚙️ Register New Land
+        </h3>
+        <form id="add-land-form">
+          <div class="form-group">
+            <label class="form-label" for="land-khasra">Khasra Number</label>
+            <input type="text" id="land-khasra" class="form-control" placeholder="e.g. 245/1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="land-area">Area (in Hectares)</label>
+            <input type="number" id="land-area" class="form-control" step="0.1" min="0.1" placeholder="e.g. 1.5" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="land-crop">Allowed Crop Type</label>
+            <select id="land-crop" class="form-control" required>
+              <option value="wheat">Wheat</option>
+              <option value="rice">Rice</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="land-quota">Allowed Yield Quota (Quintals)</label>
+            <input type="number" id="land-quota" class="form-control" step="0.1" min="1" placeholder="e.g. 25" required>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Standard estimation: ~15 Qtl per Hectare.</span>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Register Land Record</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Previous Bookings Table -->
+    <div class="card">
+      <h3 style="color: var(--primary-dark); margin-bottom: 1.5rem;">Previous Bookings & Payments</h3>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
+              <th style="padding: 1rem 0.5rem;">Token</th>
+              <th style="padding: 1rem 0.5rem;">Centre</th>
+              <th style="padding: 1rem 0.5rem;">Date</th>
+              <th style="padding: 1rem 0.5rem;">Crop Type</th>
+              <th style="padding: 1rem 0.5rem;">Booked Qty</th>
+              <th style="padding: 1rem 0.5rem;">Accepted Qty</th>
+              <th style="padding: 1rem 0.5rem;">Total Payout</th>
+              <th style="padding: 1rem 0.5rem;">Payment Status</th>
+              <th style="padding: 1rem 0.5rem;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="previous-bookings-rows">
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 1rem 0.5rem; font-weight: 700;">T-0894</td>
+              <td style="padding: 1rem 0.5rem;">Ujjain Krishi Mandi</td>
+              <td style="padding: 1rem 0.5rem;">2026-08-10</td>
+              <td style="padding: 1rem 0.5rem;">12.4 Quintals</td>
+              <td style="padding: 1rem 0.5rem;">Wheat</td>
+              <td style="padding: 1rem 0.5rem;"><span style="color: var(--success-color); font-weight: 600;">✅ Completed</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 1rem 0.5rem; font-weight: 700;">T-0530</td>
+              <td style="padding: 1rem 0.5rem;">Ujjain Krishi Mandi</td>
+              <td style="padding: 1rem 0.5rem;">2026-07-22</td>
+              <td style="padding: 1rem 0.5rem;">18.0 Quintals</td>
+              <td style="padding: 1rem 0.5rem;">Rice</td>
+              <td style="padding: 1rem 0.5rem;"><span style="color: var(--success-color); font-weight: 600;">✅ Completed</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script src="../common/common.js"></script>
+  <script src="../common/navbar.js"></script>
+  <script src="farmer.js"></script>
+</body>
+</html>
