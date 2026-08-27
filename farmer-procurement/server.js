@@ -226,7 +226,10 @@ let STATE_DISTRICTS = [];        // raw array
 let STATE_NAMES = [];            // sorted state name list
 const DISTRICTS_BY_STATE = {};   // lowercased state name -> sorted districts
 try {
-  const locPath = path.join(__dirname, 'public', 'data', 'india-states-districts.json');
+  // Prefer the complete dataset (all 766 districts); fall back to the legacy file if absent.
+  const fullPath = path.join(__dirname, 'public', 'data', 'india-states-districts-full.json');
+  const legacyPath = path.join(__dirname, 'public', 'data', 'india-states-districts.json');
+  const locPath = fs.existsSync(fullPath) ? fullPath : legacyPath;
   STATE_DISTRICTS = JSON.parse(fs.readFileSync(locPath, 'utf-8'));
   STATE_NAMES = STATE_DISTRICTS
     .map(s => s.state)
@@ -313,6 +316,7 @@ mongoose.connect(MONGODB_URI)
     await seedAdmins();
     await seedLocations();
     await seedStateAuthorities();
+    await seedDistrictAuthorities();
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);
@@ -375,6 +379,12 @@ function codeForState(stateName) {
   return stateName.split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase();
 }
 
+// Derive a short alphabetic code from a district name (e.g. "Agra" -> "AGR").
+function codeForDistrict(name) {
+  const clean = (name || '').replace(/[^A-Za-z]/g, '');
+  return (clean.slice(0, 3).toUpperCase()) || 'XXX';
+}
+
 // Seed one state authority (role:'state', adminId ST-<code>) per Indian state, for testing.
 // Only creates missing ones — never overwrites existing accounts.
 async function seedStateAuthorities() {
@@ -399,6 +409,61 @@ async function seedStateAuthorities() {
     console.log(`State authorities seeded: ${created} new (default password: state123). e.g. ST-UP, ST-MP`);
   } catch (err) {
     console.error('Failed to seed state authorities:', err);
+  }
+}
+
+// Seed one district authority (role:'district', adminId DT-<stateCode>-<distCode>) for EVERY
+// district of every state, for testing/login. Only creates missing accounts — never overwrites,
+// and skips any state+district that already has a district account (e.g. the legacy DT-IND-01).
+async function seedDistrictAuthorities() {
+  try {
+    const existingDistrictUsers = await User.find({ role: 'district' })
+      .select('adminId state district').lean();
+    const usedAdminIds = new Set(existingDistrictUsers.map(u => u.adminId));
+    const existingCombos = new Set(
+      existingDistrictUsers.map(u => `${(u.state || '').toLowerCase()}|${(u.district || '').toLowerCase()}`)
+    );
+
+    // All district accounts share the same demo password — hash once to avoid 700+ bcrypt calls.
+    const sharedHash = await bcrypt.hash('district123', 10);
+    const toCreate = [];
+
+    for (const stateName of STATE_NAMES) {
+      const stCode = codeForState(stateName);
+      const districts = DISTRICTS_BY_STATE[stateName.toLowerCase()] || [];
+      const usedDistCodes = new Set();
+      for (const districtName of districts) {
+        // Skip if this state+district already has a district authority account.
+        if (existingCombos.has(`${stateName.toLowerCase()}|${districtName.toLowerCase()}`)) continue;
+
+        // Build a unique district code within this state (append a counter on collision).
+        const base = codeForDistrict(districtName);
+        let code = base, n = 1;
+        while (usedDistCodes.has(code)) { n++; code = base + n; }
+        usedDistCodes.add(code);
+
+        // Ensure the full adminId is globally unique too.
+        let adminId = `DT-${stCode}-${code}`;
+        let suffix = 1;
+        while (usedAdminIds.has(adminId)) { suffix++; adminId = `DT-${stCode}-${code}-${suffix}`; }
+        usedAdminIds.add(adminId);
+
+        toCreate.push({
+          adminId,
+          password: sharedHash,
+          role: 'district',
+          state: stateName,
+          district: districtName,
+          firstName: districtName,
+          lastName: 'District Authority'
+        });
+      }
+    }
+
+    if (toCreate.length) await User.insertMany(toCreate, { ordered: false });
+    console.log(`District authorities seeded: ${toCreate.length} new (default password: district123). e.g. DT-UP-AGR (Agra), DT-MP-IND (Indore)`);
+  } catch (err) {
+    console.error('Failed to seed district authorities:', err);
   }
 }
 
