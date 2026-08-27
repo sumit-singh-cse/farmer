@@ -733,6 +733,48 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
   }
 });
 
+// DELETE Cancel Booking (Farmer) - only allowed while still 'Booked'
+app.delete('/api/bookings/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Ownership check - a farmer can only cancel their own booking
+    if (!booking.farmer.equals(req.user._id)) {
+      return res.status(403).json({ error: 'You can only cancel your own bookings' });
+    }
+
+    // Only a booking that has not yet arrived/processed can be cancelled
+    if (booking.status !== 'Booked') {
+      return res.status(400).json({
+        error: `This booking cannot be cancelled because its status is "${booking.status}". Only "Booked" slots can be cancelled.`
+      });
+    }
+
+    // Restore the land's booked quantity so the quota is freed up again
+    const land = await Land.findById(booking.land);
+    if (land) {
+      land.bookedQuantity = Math.max(0, land.bookedQuantity - booking.quantity);
+      await land.save();
+    }
+
+    await Booking.deleteOne({ _id: booking._id });
+
+    console.log(`[Success] Booking cancelled: Token=${booking.tokenNumber} by ${req.user.mobile}`);
+    return res.status(200).json({
+      status: 'success',
+      message: `Booking ${booking.tokenNumber} cancelled successfully`
+    });
+  } catch (error) {
+    console.error('Cancel booking error:', error);
+    return res.status(500).json({ error: 'Failed to cancel booking due to a server error' });
+  }
+});
+
 // GET My Bookings (Phase 4 & 6)
 app.get('/api/bookings/my', authenticateToken, async (req, res) => {
   try {

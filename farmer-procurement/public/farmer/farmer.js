@@ -154,7 +154,19 @@ function renderBookings(bookings) {
             <span style="font-weight: 700; margin-left: 0.25rem; color: var(--primary-color);">${active.status}</span>
           </div>
         </div>
+        ${active.status === 'Booked' ? `
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="btn btn-outline" id="cancel-booking-btn" data-id="${active._id}" style="color: var(--danger-color); border-color: var(--danger-color);">❌ Cancel This Booking</button>
+          <span style="font-size: 0.85rem; color: var(--text-muted);">You can cancel while the status is still "Booked".</span>
+        </div>
+        ` : ''}
       `;
+
+      // Wire up the cancel button (only present when status is 'Booked')
+      const cancelBtn = document.getElementById('cancel-booking-btn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => cancelBooking(active._id, active.tokenNumber));
+      }
     } else {
       // No active booking - show empty state
       activePanel.innerHTML = `
@@ -212,5 +224,32 @@ function renderBookings(bookings) {
         </tr>
       `;
     }
+  }
+}
+
+// Cancel an active booking (status must be 'Booked')
+async function cancelBooking(bookingId, tokenNumber) {
+  if (!confirm(`Are you sure you want to cancel booking ${tokenNumber || ''}? This cannot be undone.`)) {
+    return;
+  }
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/bookings/${bookingId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to cancel booking');
+    }
+
+    showToast(data.message || 'Booking cancelled successfully', 'success');
+    await loadBookings();
+  } catch (error) {
+    console.error('Cancel booking error:', error);
+    showToast(error.message || 'Failed to cancel booking. Please try again.', 'error');
   }
 }

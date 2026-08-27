@@ -105,6 +105,86 @@
         font-size: 0.8rem;
       }
     }
+
+    /* ===== Booking Confirmation Modal ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+      animation: overlayFade 0.2s ease;
+    }
+    .modal-overlay.open { display: flex; }
+    @keyframes overlayFade { from { opacity: 0; } to { opacity: 1; } }
+    .modal-box {
+      background: #fff;
+      width: 100%;
+      max-width: 560px;
+      max-height: 92vh;
+      overflow-y: auto;
+      border-radius: 16px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+      animation: modalPop 0.25s ease;
+    }
+    @keyframes modalPop {
+      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal-head {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      border-radius: 16px 16px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-head h3 { margin: 0; font-size: 1.3rem; }
+    .modal-head p { margin: 0.25rem 0 0; font-size: 0.85rem; opacity: 0.85; }
+    .modal-close {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.35); }
+    .modal-body { padding: 1.5rem; }
+    .modal-detail {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px dashed var(--border-color);
+      font-size: 0.95rem;
+    }
+    .modal-detail:last-of-type { border-bottom: none; }
+    .modal-detail label { color: var(--text-muted); font-weight: 500; }
+    .modal-detail span { font-weight: 700; color: var(--text-main); text-align: right; }
+    .modal-otp-section {
+      margin-top: 1.25rem;
+      padding: 1.25rem;
+      background: rgba(44, 110, 89, 0.06);
+      border: 1px dashed var(--primary-light);
+      border-radius: var(--radius-sm);
+    }
+    .modal-otp-section.hidden { display: none; }
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .modal-actions .btn { flex: 1; }
+    @media (max-width: 480px) {
+      .modal-actions { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
@@ -228,6 +308,44 @@
       </div>
     </div>
   </main>
+
+  <!-- ===== Booking Confirmation Modal ===== -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <h3>Confirm Your Booking</h3>
+          <p>Please review the details before generating your token.</p>
+        </div>
+        <button type="button" class="modal-close" id="modal-close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-detail"><label>Land Record</label><span id="m-land">-</span></div>
+        <div class="modal-detail"><label>Crop Type</label><span id="m-crop">-</span></div>
+        <div class="modal-detail"><label>Quantity</label><span id="m-qty">-</span></div>
+        <div class="modal-detail"><label>Capacity Units</label><span id="m-units">-</span></div>
+        <div class="modal-detail"><label>District</label><span id="m-district">-</span></div>
+        <div class="modal-detail"><label>Procurement Centre</label><span id="m-centre">-</span></div>
+        <div class="modal-detail"><label>Date &amp; Time Slot</label><span id="m-datetime">-</span></div>
+
+        <!-- OTP verification section (revealed after Send OTP) -->
+        <div class="modal-otp-section hidden" id="modal-otp-section">
+          <label class="form-label" for="m-otp">Enter OTP sent to your mobile</label>
+          <input type="text" id="m-otp" class="form-control" placeholder="6-digit OTP" pattern="[0-9]{6}" maxlength="6">
+          <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.4rem;">
+            Demo mode: use OTP <strong>123456</strong>. Didn't get it?
+            <a href="#" id="m-resend-otp" style="font-weight:600;">Resend</a>
+          </span>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="m-cancel-btn">Cancel</button>
+          <button type="button" class="btn btn-primary" id="m-send-otp-btn">Send OTP</button>
+          <button type="button" class="btn btn-primary" id="m-confirm-btn" style="display:none;">Confirm Booking</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Footer -->
   <div id="footer"></div>
@@ -475,7 +593,7 @@
       }
     }
 
-    // Submit booking
+    // Submit booking -> open confirmation modal (does NOT book directly)
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -493,7 +611,97 @@
         return;
       }
 
-      // Gather all form data for API call
+      openConfirmModal();
+    });
+
+    // ===== Confirmation Modal + OTP Flow =====
+    const modal = document.getElementById('confirm-modal');
+    const otpSection = document.getElementById('modal-otp-section');
+    const sendOtpBtn = document.getElementById('m-send-otp-btn');
+    const confirmBtn = document.getElementById('m-confirm-btn');
+    const otpInput = document.getElementById('m-otp');
+    const resendLink = document.getElementById('m-resend-otp');
+
+    let expectedOtp = null; // demo OTP returned by the server
+
+    function openConfirmModal() {
+      // Populate the modal with a full summary of the booking
+      const units = Math.ceil((parseFloat(qtyInput.value) || 0) / 5) || 0;
+      document.getElementById('m-land').textContent = landSel.options[landSel.selectedIndex].text;
+      document.getElementById('m-crop').textContent = cropSel.value.toUpperCase();
+      document.getElementById('m-qty').textContent = `${parseFloat(qtyInput.value).toFixed(1)} Quintals`;
+      document.getElementById('m-units').textContent = `${units} Unit${units > 1 ? 's' : ''} (~${units * 5} min)`;
+      document.getElementById('m-district').textContent = distSel.value;
+      document.getElementById('m-centre').textContent = centreSel.options[centreSel.selectedIndex].text;
+      document.getElementById('m-datetime').textContent = `${dateInput.value} (${slotInput.value})`;
+
+      // Reset OTP state each time the modal opens
+      expectedOtp = null;
+      otpInput.value = '';
+      otpSection.classList.add('hidden');
+      sendOtpBtn.style.display = '';
+      sendOtpBtn.disabled = false;
+      sendOtpBtn.textContent = 'Send OTP';
+      confirmBtn.style.display = 'none';
+
+      modal.classList.add('open');
+    }
+
+    function closeConfirmModal() {
+      modal.classList.remove('open');
+    }
+
+    document.getElementById('modal-close-btn').addEventListener('click', closeConfirmModal);
+    document.getElementById('m-cancel-btn').addEventListener('click', closeConfirmModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeConfirmModal();
+    });
+
+    // Send OTP to the logged-in farmer's mobile (demo mode)
+    async function sendBookingOtp() {
+      const user = getAuthUser();
+      if (!user || !user.mobile) {
+        showToast('Could not find your mobile number. Please login again.', 'error');
+        return;
+      }
+      sendOtpBtn.disabled = true;
+      sendOtpBtn.textContent = 'Sending...';
+      try {
+        const data = await fetchAPI('/api/send-otp', {
+          method: 'POST',
+          body: { mobile: user.mobile }
+        });
+        expectedOtp = data.code || '123456';
+        otpSection.classList.remove('hidden');
+        sendOtpBtn.style.display = 'none';
+        confirmBtn.style.display = '';
+        otpInput.focus();
+        showToast(`OTP sent to ${user.mobile}`, 'success');
+        if (data.code) {
+          console.log('📱 Demo Booking OTP:', data.code);
+          alert(`📱 Demo OTP for booking: ${data.code}`);
+        }
+      } catch (err) {
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = 'Send OTP';
+      }
+    }
+
+    sendOtpBtn.addEventListener('click', sendBookingOtp);
+    resendLink.addEventListener('click', (e) => { e.preventDefault(); sendBookingOtp(); });
+
+    // Verify OTP and finally create the booking
+    confirmBtn.addEventListener('click', async () => {
+      const entered = otpInput.value.trim();
+      if (!/^\d{6}$/.test(entered)) {
+        showToast('Please enter the 6-digit OTP.', 'warning');
+        return;
+      }
+      if (entered !== expectedOtp) {
+        showToast('Incorrect OTP. Please try again.', 'error');
+        return;
+      }
+
       const formData = {
         landId: landSel.value,
         cropType: cropSel.value,
@@ -504,24 +712,24 @@
         timeWindow: slotInput.value
       };
 
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Booking...';
       try {
-        // Call backend API to create booking
         const response = await fetchAPI('/api/bookings', {
           method: 'POST',
           body: formData
         });
 
-        // Booking successful - show confirmation
+        closeConfirmModal();
         showToast(`Booking confirmed! Token: ${response.booking.tokenNumber}, Queue Position: #${response.booking.queuePosition}`, 'success');
 
-        // Redirect to dashboard after a short delay
         setTimeout(() => {
           window.location.href = 'dashboard.html';
-        }, 2500);
-
+        }, 2000);
       } catch (error) {
-        // Booking failed - show error message
         showToast(error.message || 'Booking failed. Please try again.', 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm Booking';
       }
     });
 
