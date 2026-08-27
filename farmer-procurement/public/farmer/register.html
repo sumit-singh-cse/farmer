@@ -80,8 +80,6 @@
             <label class="form-label" for="state">State</label>
             <select id="state" class="form-control" required>
               <option value="">-- Select State --</option>
-              <option value="Madhya Pradesh">Madhya Pradesh</option>
-              <option value="Uttar Pradesh">Uttar Pradesh</option>
             </select>
           </div>
           <div class="form-group">
@@ -119,10 +117,49 @@
   <script src="../common/common.js"></script>
   <script src="../common/navbar.js"></script>
   <script>
+    let locationsData = {};
+
+    // Load locations data from JSON
+    async function loadLocationsData() {
+      try {
+        const response = await fetch('../data/locations.json');
+        locationsData = await response.json();
+        populateStates();
+      } catch (error) {
+        console.error('Failed to load locations data:', error);
+        // Fallback to API if JSON fails
+        loadStatesFromAPI();
+      }
+    }
+
+    function populateStates() {
+      const stateSel = document.getElementById('state');
+      stateSel.innerHTML = '<option value="">-- Select State --</option>';
+      locationsData.states.forEach(state => {
+        stateSel.innerHTML += `<option value="${state}">${state}</option>`;
+      });
+    }
+
+    async function loadStatesFromAPI() {
+      try {
+        const states = await fetchAPI('/api/states');
+        const stateSel = document.getElementById('state');
+        stateSel.innerHTML = '<option value="">-- Select State --</option>';
+        states.forEach(state => {
+          stateSel.innerHTML += `<option value="${state.name}">${state.name}</option>`;
+        });
+      } catch (err) {
+        console.error('Failed to load states:', err);
+      }
+    }
+
     const sendBtn = document.getElementById('reg-send-otp');
     const otpGroup = document.getElementById('reg-otp-group');
     const stateSel = document.getElementById('state');
     const distSel = document.getElementById('district');
+
+    // Load locations on page load
+    document.addEventListener('DOMContentLoaded', loadLocationsData);
 
     sendBtn.addEventListener('click', () => {
       const mob = document.getElementById('mobile').value;
@@ -147,39 +184,38 @@
       });
     });
 
-    // Fetch and populate states on page load
-    fetchAPI('/api/states')
-      .then(states => {
-        stateSel.innerHTML = '<option value="">-- Select State --</option>';
-        states.forEach(state => {
-          stateSel.innerHTML += `<option value="${state.name}">${state.name}</option>`;
-        });
-      })
-      .catch(err => console.error('Failed to load states:', err));
-
     stateSel.addEventListener('change', () => {
       distSel.innerHTML = '<option value="">-- Select District --</option>';
       if (!stateSel.value) return;
-      
-      fetchAPI(`/api/districts/${encodeURIComponent(stateSel.value)}`)
-        .then(districts => {
-          districts.forEach(dist => {
-            distSel.innerHTML += `<option value="${dist.name}">${dist.name}</option>`;
-          });
-        })
-        .catch(err => console.error('Failed to load districts:', err));
+
+      // Load districts from JSON
+      if (locationsData.districts && locationsData.districts[stateSel.value]) {
+        const districts = locationsData.districts[stateSel.value];
+        districts.forEach(dist => {
+          distSel.innerHTML += `<option value="${dist}">${dist}</option>`;
+        });
+      } else {
+        // Fallback to API if not in JSON
+        fetchAPI(`/api/districts/${encodeURIComponent(stateSel.value)}`)
+          .then(districts => {
+            districts.forEach(dist => {
+              distSel.innerHTML += `<option value="${dist.name}">${dist.name}</option>`;
+            });
+          })
+          .catch(err => console.error('Failed to load districts:', err));
+      }
     });
 
     document.getElementById('farmer-register-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const pw = document.getElementById('password').value;
       const cpw = document.getElementById('confirm-password').value;
-      
+
       if (pw !== cpw) {
         showToast('Passwords do not match!', 'error');
         return;
       }
-      
+
       const body = {
         firstName: document.getElementById('first-name').value,
         lastName: document.getElementById('last-name').value,
@@ -191,7 +227,7 @@
         district: distSel.value,
         password: pw
       };
-      
+
       fetchAPI('/api/register', {
         method: 'POST',
         body
