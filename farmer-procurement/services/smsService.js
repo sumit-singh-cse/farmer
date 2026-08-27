@@ -1,67 +1,29 @@
 /**
- * Fast2SMS Integration Service
- * Handles real SMS notifications for OTP, booking alerts, and payment updates
- *
- * API Docs: https://www.fast2sms.com/dev/bulkV2
+ * Demo SMS Service (No real SMS provider)
+ * Logs all SMS-like messages to console. In demo mode, all notifications are
+ * simulated and no external SMS service (Fast2SMS, Twilio, etc.) is contacted.
  */
 
 require('dotenv').config();
 
-const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY;
-const FAST2SMS_BASE_URL = 'https://www.fast2sms.com/dev/bulkV2';
-
-// Cache for template approval status (in production, store in DB)
-const templateCache = new Map();
+// Demo mode is always enabled (no real SMS provider is used)
+const DEMO_MODE = true;
 
 /**
- * Send SMS via Fast2SMS API
+ * Send SMS (DEMO MODE - logs only, no real SMS sent)
  * @param {string} mobile - 10-digit mobile number
  * @param {string} message - Message content
  * @param {string} route - Route type (otp, promotional, transactional)
- * @returns {Object} Response from API
+ * @returns {Object} Response with demo status
  */
 async function sendSMS(mobile, message, route = 'otp') {
-  // Demo mode if no API key configured
-  if (!FAST2SMS_API_KEY || FAST2SMS_API_KEY === 'YOUR_FAST2SMS_API_KEY') {
-    console.log(`[SMS-Demo] Would send to ${mobile}: ${message.substring(0, 50)}...`);
-    return {
-      success: true,
-      demo: true,
-      message: 'SMS sent in demo mode (no API key configured)',
-      to: mobile
-    };
-  }
-
-  try {
-    const formData = new URLSearchParams();
-    formData.append('authorization', FAST2SMS_API_KEY);
-    formData.append('message', message);
-    formData.append('language', 'english');
-    formData.append('route', route);
-    formData.append('numbers', mobile);
-
-    const response = await fetch(FAST2SMS_BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cache-Control': 'no-cache'
-      },
-      body: formData.toString()
-    });
-
-    const data = await response.json();
-
-    if (data.return === true) {
-      console.log(`[SMS-Sent] Successfully sent to ${mobile}`);
-      return { success: true, data };
-    } else {
-      console.error(`[SMS-Failed] Failed to send to ${mobile}:`, data);
-      return { success: false, error: data.message || 'Unknown error' };
-    }
-  } catch (error) {
-    console.error(`[SMS-Error] Exception sending SMS to ${mobile}:`, error.message);
-    return { success: false, error: error.message };
-  }
+  console.log(`[SMS-Demo] [${route}] To: ${mobile} | Message: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`);
+  return {
+    success: true,
+    demo: true,
+    message: 'SMS simulated in demo mode (no real SMS sent)',
+    to: mobile
+  };
 }
 
 /**

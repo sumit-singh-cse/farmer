@@ -161,8 +161,6 @@
             <label class="form-label" for="booking-district">Select District</label>
             <select id="booking-district" class="form-control" required>
               <option value="">-- Select District --</option>
-              <option value="indore">Indore</option>
-              <option value="ujjain">Ujjain</option>
             </select>
           </div>
 
@@ -315,21 +313,39 @@
         const statesResponse = await fetch('/api/states');
         const states = await statesResponse.json();
 
-        // For demo, select the first state (Madhya Pradesh)
-        if (states.length > 0) {
-          const mpState = states.find(s => s.name === 'Madhya Pradesh') || states[0];
+        // Get the user's registered state from localStorage
+        const userData = getAuthUser();
+        let selectedState = userData?.state || 'Madhya Pradesh';
 
-          // Load districts for the state
-          const districtsResponse = await fetch(`/api/districts/${mpState.name}`);
+        // Find matching state (case-insensitive)
+        let selectedStateObj = states.find(s => s.name.toLowerCase() === selectedState.toLowerCase());
+
+        // Fallback to first state if user state not found
+        if (!selectedStateObj && states.length > 0) {
+          selectedStateObj = states[0];
+          selectedState = selectedStateObj.name;
+        }
+
+        if (selectedStateObj) {
+          // Load districts for the selected state
+          const districtsResponse = await fetch(`/api/districts/${encodeURIComponent(selectedStateObj.name)}`);
           const districts = await districtsResponse.json();
 
           distSel.innerHTML = '<option value="">-- Select District --</option>';
           districts.forEach(district => {
             const option = document.createElement('option');
-            option.value = district.name.toLowerCase();
+            option.value = district.name; // Use full district name for API calls
             option.textContent = district.name;
             distSel.appendChild(option);
           });
+
+          // Pre-select user's district if available
+          if (userData?.district) {
+            const districtMatch = districts.find(d => d.name.toLowerCase() === userData.district.toLowerCase());
+            if (districtMatch) {
+              distSel.value = districtMatch.name;
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to load districts:', error);

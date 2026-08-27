@@ -1,5 +1,8 @@
 // Load environment variables
-const dotenvResult = require('dotenv').config({ override: true });
+const dotenvResult = require('dotenv').config({
+  path: require('path').resolve(__dirname, '.env'),
+  override: true
+});
 console.log('--- DEBUG: Dotenv load result:', dotenvResult);
 
 const express = require('express');
@@ -14,9 +17,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 
-// SMS and WhatsApp services
+// SMS service (demo OTP mode only - no real SMS)
 const { sendOTP, sendBookingConfirmation, sendPaymentNotification, sendRegistrationConfirmation } = require('./services/smsService');
-const { sendWhatsAppAlert } = require('./whatsapp');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -25,8 +27,29 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/farmer
 // ========================================
 // SECURITY MIDDLEWARE
 // ========================================
-// Helmet for security headers
-app.use(helmet());
+// Helmet for security headers.
+// NOTE: The frontend pages use inline <script> and inline styles/event handlers.
+// Helmet's DEFAULT Content-Security-Policy sets `script-src 'self'`, which blocks
+// ALL inline JavaScript in the browser. On Render (served over HTTPS) this silently
+// broke the register/login pages: the state dropdown never populated and the
+// "Send OTP" button did nothing because their inline scripts were never executed.
+// We keep Helmet's other protections but relax the CSP to allow inline scripts/styles.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  },
+  // Allow images/uploads to be embedded without cross-origin resource policy issues
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 // Rate limiting temporarily disabled for demo - will re-enable later
 /*
@@ -660,7 +683,7 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
 
     console.log(`[Success] Booking created: Token=${tokenNumber}, Farmer=${req.user.firstName} ${req.user.lastName}, Qty=${qtyVal} Qtl`);
 
-    // Send booking confirmation via SMS (Fast2SMS) - non-blocking
+    // Send booking confirmation notification - non-blocking (demo mode)
     sendBookingConfirmation(req.user.mobile, {
       farmerName: req.user.firstName,
       tokenNumber,
@@ -669,11 +692,7 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
       timeWindow,
       queuePosition,
       estimatedTime: requestedUnits * 5
-    }).catch(err => console.error('SMS booking alert failed:', err.message));
-
-    // Also send WhatsApp notification (best-effort, non-blocking)
-    const bookingMsg = `Booking Confirmed! Token: ${tokenNumber}, Centre: ${centre.name}, Date: ${date} (${timeWindow}), Queue Position: #${queuePosition}. Estimated processing time: ${requestedUnits * 5} mins. Please arrive on time.`;
-    sendWhatsAppAlert(req.user.mobile, bookingMsg).catch(err => console.error('WhatsApp alert failed:', err.message));
+    }).catch(err => console.error('Booking notification failed:', err.message));
 
     return res.status(201).json({
       status: 'success',
@@ -823,12 +842,8 @@ app.post('/api/register', async (req, res) => {
     await farmer.save();
     console.log(`[Success] Farmer registered: ${firstName} ${lastName} (${mobile})`);
 
-    // Send registration confirmation via SMS (Fast2SMS)
+    // Send registration confirmation notification (demo mode)
     await sendRegistrationConfirmation(mobile, `${firstName} ${lastName}`);
-
-    // Also send WhatsApp notification (best-effort, non-blocking)
-    const welcomeMsg = `Welcome to ProcureHub, ${firstName} ${lastName}! Your Farmer registration is successful. Please login with your mobile and password.`;
-    sendWhatsAppAlert(mobile, welcomeMsg).catch(err => console.error('WhatsApp alert failed (non-blocking):', err.message));
 
     return res.status(201).json({
       status: 'success',
@@ -1340,18 +1355,14 @@ app.post('/api/admin/payments/:id/release', authenticateToken, async (req, res) 
 
     console.log(`[Success] Payment ${payment._id} released by admin ${req.user.adminId || req.user.mobile}`);
 
-    // Send payment notification via SMS (Fast2SMS) - non-blocking
+    // Send payment notification - non-blocking (demo mode)
     if (payment.farmer && payment.farmer.mobile) {
       sendPaymentNotification(payment.farmer.mobile, {
         farmerName: payment.farmer.firstName,
         amount: payment.amount,
         tokenNumber: payment.procurement?.booking?.tokenNumber || 'N/A',
         paymentMethod: 'Released'
-      }).catch(err => console.error('SMS payment notification failed:', err.message));
-
-      // Also send WhatsApp payout notification (best-effort)
-      const payoutMsg = `Payment Released! An amount of ₹${payment.amount.toLocaleString('en-IN')} has been approved and credited to your account for delivery of ${payment.acceptedQuantity} Qtl under Token: ${payment.procurement?.booking?.tokenNumber || 'N/A'}.`;
-      sendWhatsAppAlert(payment.farmer.mobile, payoutMsg).catch(err => console.error('WhatsApp alert failed:', err.message));
+      }).catch(err => console.error('Payment notification failed:', err.message));
     }
 
     return res.status(200).json({
