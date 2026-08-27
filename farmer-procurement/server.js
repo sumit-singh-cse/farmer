@@ -20,7 +20,7 @@ const { sendWhatsAppAlert } = require('./whatsapp');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/farmer_procurement';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://singhkhushbu8127_db_user:yrzloXBAmyi7OZcr@cluster0.rurxuuk.mongodb.net/farmer_procurement?retryWrites=true&w=majority';
 
 // ========================================
 // SECURITY MIDDLEWARE
@@ -750,7 +750,7 @@ app.get('/api/status/:token', async (req, res) => {
   }
 });
 
-// Request Mobile OTP - Now uses Fast2SMS API for real SMS
+// Request Mobile OTP - Demo mode with fixed OTP 123456
 app.post('/api/send-otp', async (req, res) => {
   const { mobile } = req.body;
 
@@ -759,49 +759,25 @@ app.post('/api/send-otp', async (req, res) => {
     return res.status(400).json({ error: 'Please provide a valid 10-digit mobile number' });
   }
 
-  // Generate a random 6-digit OTP
-  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  // Fixed demo OTP for testing
+  const otpCode = '123456';
 
-  // Store OTP with expiry (5 minutes)
+  // Store OTP with expiry (30 minutes for demo)
   otpStore.set(mobile, {
     code: otpCode,
-    expiresAt: Date.now() + 5 * 60 * 1000,
+    expiresAt: Date.now() + 30 * 60 * 1000,
     attempts: 0
   });
 
-  console.log(`[OTP] Generated code ${otpCode} for mobile: ${mobile}`);
+  console.log(`[OTP-Demo] Generated code ${otpCode} for mobile: ${mobile}`);
 
-  try {
-    // Send OTP via Fast2SMS API
-    const smsResult = await sendOTP(mobile, otpCode);
-
-    if (smsResult.success) {
-      return res.status(200).json({
-        status: 'success',
-        message: 'OTP sent successfully to your mobile number',
-        code: otpCode // Only return in demo mode or for testing
-      });
-    } else {
-      // Fallback to demo mode if SMS fails
-      console.log('[OTP-Fallback] SMS failed, using demo mode');
-      return res.status(200).json({
-        status: 'success',
-        message: `SMS failed to send. Demo OTP: ${otpCode} (5 min expiry)`,
-        code: otpCode,
-        fallback: true
-      });
-    }
-  } catch (error) {
-    console.error('[OTP-Error]', error);
-    // Fallback to demo mode if SMS service errors
-    return res.status(200).json({
-      status: 'success',
-      message: `Demo OTP: ${otpCode} (5 min expiry)`,
-      code: otpCode,
-      fallback: true,
-      error: error.message
-    });
-  }
+  // Always return demo OTP
+  return res.status(200).json({
+    status: 'success',
+    message: `Demo OTP: ${otpCode} (30 min expiry)`,
+    code: otpCode,
+    demo: true
+  });
 });
 
 // Farmer Registration

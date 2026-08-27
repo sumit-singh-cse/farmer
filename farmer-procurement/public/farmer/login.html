@@ -91,10 +91,10 @@
         showToast(data.message, 'success');
         otpContainer.style.display = 'block';
         document.getElementById('otp').setAttribute('required', 'required');
-        // Show OTP in console for demo mode
+        // Show OTP in alert
         if (data.code) {
           console.log('📱 Demo OTP:', data.code);
-          alert(`📱 Demo OTP: ${data.code}\n\nThis OTP is also shown in the browser console (F12)`);
+          alert(`📱 Demo OTP: ${data.code}`);
         }
       }).catch(err => {
         // Handled in fetchAPI

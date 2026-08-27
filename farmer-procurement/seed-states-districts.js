@@ -9,7 +9,7 @@ require('dotenv').config({ override: true });
 const mongoose = require('mongoose');
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/farmer_procurement';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://singhkhushbu8127_db_user:yrzloXBAmyi7OZcr@cluster0.rurxuuk.mongodb.net/farmer_procurement?retryWrites=true&w=majority';
 
 // State Schema
 const stateSchema = new mongoose.Schema({
