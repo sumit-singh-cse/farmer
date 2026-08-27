@@ -28,19 +28,27 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/farmer
 // Helmet for security headers
 app.use(helmet());
 
-// Rate limiting for API endpoints
+// Rate limiting for API endpoints - selective, not global
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes default
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 10, // Limit each IP to 10 requests per window
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Increased from 10 to 100
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later'
+  },
+  skip: (req) => {
+    // Skip rate limiting for read-only operations (GET requests to public data)
+    return req.method === 'GET' && (
+      req.path.startsWith('/api/states') ||
+      req.path.startsWith('/api/districts') ||
+      req.path.startsWith('/api/centres')
+    );
   }
 });
 
-// Apply rate limiting to all requests
+// Apply rate limiting to sensitive operations only
 app.use(limiter);
 
 // Limit OTP endpoint more strictly (prevent abuse)
