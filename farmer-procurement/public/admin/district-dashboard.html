@@ -92,28 +92,15 @@
           <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
             <thead>
               <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
-                <th style="padding: 1rem 0.5rem;">Centre Name</th>
-                <th style="padding: 1rem 0.5rem;">Storage Cap</th>
-                <th style="padding: 1rem 0.5rem;">Daily Slots Cap</th>
+                <th style="padding: 1rem 0.5rem;">Centre / Login ID</th>
+                <th style="padding: 1rem 0.5rem;">Operator</th>
+                <th style="padding: 1rem 0.5rem;">Storage</th>
                 <th style="padding: 1rem 0.5rem;">Status</th>
                 <th style="padding: 1rem 0.5rem;">Actions</th>
               </tr>
             </thead>
             <tbody id="centres-table-body">
-              <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 1rem 0.5rem; font-weight: 600;">Indore Main Mandi</td>
-                <td style="padding: 1rem 0.5rem;">5,000 Qtl</td>
-                <td style="padding: 1rem 0.5rem;">120 slots/day</td>
-                <td style="padding: 1rem 0.5rem;"><span class="centre-status-badge status-active">Active</span></td>
-                <td style="padding: 1rem 0.5rem;"><button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="showToast('Edit capability scheduled for Phase 2!', 'info')">Edit</button></td>
-              </tr>
-              <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 1rem 0.5rem; font-weight: 600;">Depalpur Sub-centre</td>
-                <td style="padding: 1rem 0.5rem;">2,500 Qtl</td>
-                <td style="padding: 1rem 0.5rem;">60 slots/day</td>
-                <td style="padding: 1rem 0.5rem;"><span class="centre-status-badge status-active">Active</span></td>
-                <td style="padding: 1rem 0.5rem;"><button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="showToast('Edit capability scheduled for Phase 2!', 'info')">Edit</button></td>
-              </tr>
+              <tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading centres…</td></tr>
             </tbody>
           </table>
         </div>
@@ -147,7 +134,20 @@
             <span style="font-size: 0.75rem; color: var(--text-muted);">Standard base processing rule (5 Qtl = 5 mins) will apply.</span>
           </div>
 
-          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Create Centre</button>
+          <div style="border-top: 1px dashed var(--border-color); margin: 1rem 0 1rem; padding-top: 1rem;">
+            <strong style="font-size: 0.9rem; color: var(--primary-dark);">👤 Centre Operator</strong>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0.75rem;">A login ID will be generated and a temporary password sent to the operator's mobile.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="operator-name">Operator Name</label>
+            <input type="text" id="operator-name" class="form-control" placeholder="e.g. Ramesh Kumar" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="operator-mobile">Operator Mobile</label>
+            <input type="tel" id="operator-mobile" class="form-control" placeholder="10-digit mobile" pattern="[0-9]{10}" maxlength="10" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Create Centre & Operator</button>
         </form>
       </div>
     </div>
@@ -218,6 +218,33 @@
     </div>
   </div>
 
+  <!-- Centre Detail Modal -->
+  <div class="modal-backdrop" id="centre-detail-dialog">
+    <div class="weighing-modal" style="max-width: 560px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <h3 style="color: var(--primary-dark); margin-bottom: 0.25rem;" id="cd-name">Centre</h3>
+        <button type="button" class="btn btn-outline" style="padding:0.2rem 0.6rem;" onclick="closeCentreDetail()">&times;</button>
+      </div>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;" id="cd-id">—</p>
+      <div id="cd-body" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem 1.5rem; font-size:0.9rem;"></div>
+      <div style="display:flex; gap:1rem; margin-top:1.5rem; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" id="cd-reset-btn" style="flex:1; min-width:140px;">🔑 Reset Operator Password</button>
+        <button type="button" class="btn btn-outline" id="cd-toggle-btn" style="flex:1; min-width:140px; color:var(--danger-color); border-color:var(--danger-color);">Close Centre</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Temp Password Reveal Modal -->
+  <div class="modal-backdrop" id="temp-pass-dialog">
+    <div class="weighing-modal" style="max-width: 460px; text-align:center;">
+      <h3 style="color: var(--primary-dark); margin-bottom: 0.5rem;">✅ Temporary Password</h3>
+      <p style="font-size:0.85rem; color:var(--text-muted);" id="tp-sub">Share this with the operator. They must change it on first login.</p>
+      <div style="margin:1.25rem 0; padding:1rem; background:#f1f5f9; border-radius:8px; font-size:1.6rem; font-weight:800; letter-spacing:2px; color:var(--primary-dark);" id="tp-value">—</div>
+      <div id="tp-login" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1rem;"></div>
+      <button type="button" class="btn btn-primary" style="width:100%;" onclick="document.getElementById('temp-pass-dialog').classList.remove('open')">Done</button>
+    </div>
+  </div>
+
   <!-- Footer -->
   <div id="footer"></div>
 
@@ -239,40 +266,42 @@
 
     let loadedCentres = [];
 
-    // Load Centres and District stats
+    // Load Centres (new hierarchy endpoint: includes operator + status) and district procured stat
     function loadDistrictReport() {
+      // Total procured stat (existing report endpoint, unchanged)
       fetchAPI('/api/admin/reports/district')
         .then(data => {
           document.getElementById('district-total-procured-val').textContent = `${data.totalProcured.toLocaleString()} Quintals`;
-          tbody.innerHTML = '';
-          loadedCentres = data.centres || [];
-
-          if (loadedCentres.length === 0) {
-            tbody.innerHTML = `
-              <tr>
-                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                  No procurement centres registered in this district yet.
-                </td>
-              </tr>
-            `;
-            return;
-          }
-
-          loadedCentres.forEach(centre => {
-            tbody.innerHTML += `
-              <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 1rem 0.5rem; font-weight: 600;">${centre.name}</td>
-                <td style="padding: 1rem 0.5rem;">${centre.storageCapacity.toLocaleString()} Qtl</td>
-                <td style="padding: 1rem 0.5rem;">${centre.slotsPerHour} slots/hour</td>
-                <td style="padding: 1rem 0.5rem;"><span class="centre-status-badge status-active">Active</span></td>
-                <td style="padding: 1rem 0.5rem;">
-                  <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="openEditModal('${centre.id}')">Edit</button>
-                </td>
-              </tr>
-            `;
-          });
         })
         .catch(err => console.error('Failed to load district report:', err));
+
+      // Centres list with operator + status
+      fetchAPI('/api/district/centres')
+        .then(data => {
+          tbody.innerHTML = '';
+          loadedCentres = data.centres || [];
+          if (loadedCentres.length === 0) {
+            tbody.innerHTML = `
+              <tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">
+                No procurement centres yet. Create one on the right →
+              </td></tr>`;
+            return;
+          }
+          loadedCentres.forEach(c => {
+            const closed = c.status === 'closed';
+            tbody.innerHTML += `
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 1rem 0.5rem; font-weight: 600;">${c.name}<br><span style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">${c.centreId}</span></td>
+                <td style="padding: 1rem 0.5rem;">${c.operatorName}<br><span style="font-size:0.75rem; color:var(--text-muted);">${c.operatorMobile || ''}</span></td>
+                <td style="padding: 1rem 0.5rem;">${c.storageCapacity.toLocaleString()} Qtl</td>
+                <td style="padding: 1rem 0.5rem;"><span class="centre-status-badge ${closed ? 'status-inactive' : 'status-active'}">${closed ? 'Closed' : 'Active'}</span></td>
+                <td style="padding: 1rem 0.5rem;">
+                  <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="openCentreDetail('${c.id}')">View</button>
+                </td>
+              </tr>`;
+          });
+        })
+        .catch(err => console.error('Failed to load centres:', err));
     }
 
     // Load Pending Payments
@@ -369,27 +398,85 @@
       });
     });
 
-    // Handle Create form submit
+    // Handle Create form submit -> new endpoint that also creates the operator
     document.getElementById('create-centre-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      
       const body = {
         name: document.getElementById('centre-name').value,
         storageCapacity: document.getElementById('storage-cap').value,
         operatingHours: document.getElementById('operating-hours').value,
         slotsPerHour: document.getElementById('slots-cap').value,
-        state: user.state,
-        district: user.district
+        operatorName: document.getElementById('operator-name').value,
+        operatorMobile: document.getElementById('operator-mobile').value
       };
-      
-      fetchAPI('/api/admin/centres', {
-        method: 'POST',
-        body
-      }).then(data => {
-        showToast('New procurement centre registered!', 'success');
-        e.target.reset();
-        loadDistrictReport();
-      });
+      fetchAPI('/api/district/centres', { method: 'POST', body })
+        .then(data => {
+          showToast('Centre & operator created!', 'success');
+          e.target.reset();
+          document.getElementById('operating-hours').value = '09:00 AM - 05:00 PM';
+          document.getElementById('slots-cap').value = '15';
+          // Reveal temp password so it can be shared with the operator
+          document.getElementById('tp-value').textContent = data.tempPassword;
+          document.getElementById('tp-login').innerHTML = `Login ID: <strong>${data.operator.loginId}</strong><br>Operator mobile: ${data.operator.mobile}`;
+          document.getElementById('temp-pass-dialog').classList.add('open');
+          loadDistrictReport();
+        });
+    });
+
+    // ===== Centre detail / reset / close =====
+    const centreDetailModal = document.getElementById('centre-detail-dialog');
+    let currentDetailCentre = null;
+
+    function openCentreDetail(id) {
+      fetchAPI(`/api/district/centres/${id}`).then(c => {
+        currentDetailCentre = c;
+        document.getElementById('cd-name').textContent = c.name;
+        document.getElementById('cd-id').textContent = `${c.centreId} · ${c.district}, ${c.state}`;
+        const op = c.operator;
+        document.getElementById('cd-body').innerHTML = `
+          <div><span style="color:var(--text-muted);">Operator</span><br><strong>${op ? op.name : '(none)'}</strong></div>
+          <div><span style="color:var(--text-muted);">Operator Login ID</span><br><strong>${op ? op.loginId : '—'}</strong></div>
+          <div><span style="color:var(--text-muted);">Operator Mobile</span><br><strong>${op ? op.mobile : '—'}</strong></div>
+          <div><span style="color:var(--text-muted);">Storage Capacity</span><br><strong>${c.storageCapacity.toLocaleString()} Qtl</strong></div>
+          <div><span style="color:var(--text-muted);">Total Bookings</span><br><strong>${c.stats.totalBookings}</strong></div>
+          <div><span style="color:var(--text-muted);">Completed</span><br><strong>${c.stats.completed}</strong></div>
+          <div><span style="color:var(--text-muted);">Active Bookings</span><br><strong>${c.stats.active}</strong></div>
+          <div><span style="color:var(--text-muted);">Total Procured</span><br><strong>${c.stats.totalProcured} Qtl</strong></div>
+          <div style="grid-column:1/3;"><span style="color:var(--text-muted);">Storage Used</span><br><strong>${c.stats.storageUsedPct}%</strong></div>`;
+        const toggleBtn = document.getElementById('cd-toggle-btn');
+        if (c.status === 'closed') {
+          toggleBtn.textContent = 'Reopen Centre';
+          toggleBtn.style.color = 'var(--success-color)';
+          toggleBtn.style.borderColor = 'var(--success-color)';
+        } else {
+          toggleBtn.textContent = 'Close Centre';
+          toggleBtn.style.color = 'var(--danger-color)';
+          toggleBtn.style.borderColor = 'var(--danger-color)';
+        }
+        centreDetailModal.classList.add('open');
+      }).catch(() => {});
+    }
+
+    function closeCentreDetail() { centreDetailModal.classList.remove('open'); }
+
+    document.getElementById('cd-toggle-btn').addEventListener('click', () => {
+      if (!currentDetailCentre) return;
+      const newStatus = currentDetailCentre.status === 'closed' ? 'active' : 'closed';
+      if (newStatus === 'closed' && !confirm('Close this centre? No new bookings will be allowed.')) return;
+      fetchAPI(`/api/district/centres/${currentDetailCentre.id}/status`, { method: 'PATCH', body: { status: newStatus } })
+        .then(() => { showToast(`Centre ${newStatus === 'closed' ? 'closed' : 'reopened'}`, 'success'); closeCentreDetail(); loadDistrictReport(); });
+    });
+
+    document.getElementById('cd-reset-btn').addEventListener('click', () => {
+      if (!currentDetailCentre || !currentDetailCentre.operator) { showToast('No operator to reset', 'warning'); return; }
+      if (!confirm('Reset this operator\'s password? A new temporary password will be generated.')) return;
+      fetchAPI('/api/district/reset-password', { method: 'POST', body: { userId: currentDetailCentre.operator.userId } })
+        .then(data => {
+          document.getElementById('tp-value').textContent = data.tempPassword;
+          document.getElementById('tp-login').innerHTML = `Login ID: <strong>${currentDetailCentre.operator.loginId}</strong>`;
+          document.getElementById('temp-pass-dialog').classList.add('open');
+          showToast('Password reset', 'success');
+        });
     });
 
     // Initial load

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Settings - Farmer Procurement Hub</title>
+  <link rel="stylesheet" href="../common/style.css">
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    @media (max-width: 768px) { .account-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main>
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 2rem; color: var(--primary-dark);">⚙️ Account Settings</h2>
+      <p style="color: var(--text-muted);">Logged in as <strong id="acct-id">—</strong> (<span id="acct-role">—</span>)</p>
+    </div>
+
+    <div class="account-grid">
+      <!-- Change Password -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">🔑 Change Password</h3>
+        <form id="change-password-form">
+          <div class="form-group">
+            <label class="form-label" for="current-password">Current Password</label>
+            <input type="password" id="current-password" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-password">New Password</label>
+            <input type="password" id="new-password" class="form-control" minlength="6" required>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">At least 6 characters.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirm-password">Confirm New Password</label>
+            <input type="password" id="confirm-password" class="form-control" minlength="6" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Update Password</button>
+        </form>
+      </div>
+
+      <!-- Change Login ID -->
+      <div class="card">
+        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">🆔 Change Login ID</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Your login ID is used to sign in. Changing it will require you to log in again.
+        </p>
+        <form id="change-id-form">
+          <div class="form-group">
+            <label class="form-label" for="new-admin-id">New Login ID</label>
+            <input type="text" id="new-admin-id" class="form-control" required placeholder="e.g. ST-UP">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id-password">Confirm with Password</label>
+            <input type="password" id="id-password" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Update Login ID</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="../common/common.js"></script>
+  <script src="../common/navbar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getAuthUser();
+      if (!user || !['state', 'district', 'centre'].includes(user.role)) {
+        window.location.href = 'login.html';
+        return;
+      }
+      document.getElementById('acct-id').textContent = user.adminId || '—';
+      document.getElementById('acct-role').textContent = user.role.toUpperCase();
+
+      document.getElementById('change-password-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirm = document.getElementById('confirm-password').value;
+        if (newPassword !== confirm) {
+          showToast('New passwords do not match', 'error');
+          return;
+        }
+        try {
+          await fetchAPI('/api/account/change-password', {
+            method: 'POST',
+            body: { currentPassword, newPassword }
+          });
+          showToast('Password changed successfully', 'success');
+          e.target.reset();
+        } catch (err) { /* handled in fetchAPI */ }
+      });
+
+      document.getElementById('change-id-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newAdminId = document.getElementById('new-admin-id').value.trim();
+        const password = document.getElementById('id-password').value;
+        try {
+          const res = await fetchAPI('/api/account/change-id', {
+            method: 'POST',
+            body: { newAdminId, password }
+          });
+          showToast('Login ID updated. Please log in again.', 'success');
+          setTimeout(() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+          }, 1500);
+        } catch (err) { /* handled in fetchAPI */ }
+      });
+    });
+  </script>
+</body>
+</html>

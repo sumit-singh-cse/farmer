@@ -128,6 +128,27 @@
         </div>
       </div>
     </div>
+
+    <!-- District Authorities list -->
+    <div class="card" style="margin-top: 2rem;">
+      <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">🏛️ District Authorities in <span id="da-state">your state</span></h3>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
+              <th style="padding: 0.75rem 0.5rem;">District</th>
+              <th style="padding: 0.75rem 0.5rem;">Authority Login ID</th>
+              <th style="padding: 0.75rem 0.5rem;">Name</th>
+              <th style="padding: 0.75rem 0.5rem;">Mobile</th>
+              <th style="padding: 0.75rem 0.5rem;">Centres</th>
+            </tr>
+          </thead>
+          <tbody id="district-authorities-rows">
+            <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-muted);">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
 
   <!-- Footer -->
@@ -144,6 +165,37 @@
       }
 
       document.getElementById('state-name-display').textContent = user.state || 'Madhya Pradesh';
+
+      // Load district authorities (their login IDs) for this state
+      const daState = document.getElementById('da-state');
+      if (daState) daState.textContent = user.state || 'your state';
+      fetchAPI('/api/state/districts').then(res => {
+        const rows = document.getElementById('district-authorities-rows');
+        if (!res.districts || res.districts.length === 0) {
+          rows.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-muted);">No districts found for ${res.state}.</td></tr>`;
+          return;
+        }
+        // Header note: how many districts have an authority assigned
+        const daState = document.getElementById('da-state');
+        if (daState) daState.textContent = `${res.state} (${res.registeredAuthorities}/${res.totalDistricts} districts have an authority)`;
+
+        rows.innerHTML = res.districts.map(d => {
+          const idCell = d.hasAuthority
+            ? `<code>${d.adminId}</code>`
+            : `<span style="padding:0.15rem 0.5rem;border-radius:50px;font-size:0.75rem;background:rgba(244,162,97,0.15);color:var(--warning-color);font-weight:600;">Not assigned</span>`;
+          return `
+          <tr style="border-bottom:1px solid var(--border-color);">
+            <td style="padding:0.75rem 0.5rem; font-weight:600;">${d.district || '—'}</td>
+            <td style="padding:0.75rem 0.5rem;">${idCell}</td>
+            <td style="padding:0.75rem 0.5rem;">${d.name}</td>
+            <td style="padding:0.75rem 0.5rem;">${d.mobile || '—'}</td>
+            <td style="padding:0.75rem 0.5rem;">${d.centreCount}</td>
+          </tr>`;
+        }).join('');
+      }).catch(err => {
+        const rows = document.getElementById('district-authorities-rows');
+        if (rows) rows.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-muted);">Could not load districts.</td></tr>`;
+      });
 
       let reportData = null;
 

@@ -119,6 +119,29 @@
         </form>
       </div>
     </div>
+
+    <!-- Change Password -->
+    <div class="card" style="margin-top: 2rem;">
+      <h3 style="color: var(--primary-dark); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+        🔑 Change Password
+      </h3>
+      <form id="farmer-password-form" style="max-width: 480px;">
+        <div class="form-group">
+          <label class="form-label" for="cur-pass">Current Password</label>
+          <input type="password" id="cur-pass" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="new-pass">New Password</label>
+          <input type="password" id="new-pass" class="form-control" minlength="6" required>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">At least 6 characters.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="conf-pass">Confirm New Password</label>
+          <input type="password" id="conf-pass" class="form-control" minlength="6" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Password</button>
+      </form>
+    </div>
   </main>
 
   <!-- Footer -->
@@ -212,29 +235,49 @@
     // Handle Profile Details Update Form
     profileForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      
+
       const body = {
         firstName: document.getElementById('first-name').value,
         lastName: document.getElementById('last-name').value,
         address: document.getElementById('address').value
       };
-      
+
       fetchAPI('/api/profile', {
         method: 'PATCH',
         body
       }).then(data => {
         showToast('Profile updated successfully!', 'success');
-        
+
         // Update user name in localStorage session to update navbar greeting
         const user = getAuthUser();
         user.name = data.user.name;
         localStorage.setItem('user', JSON.stringify(user));
-        
+
         // Reload details
         loadProfile();
       }).catch(err => {
         // Handled in fetchAPI
       });
+    });
+
+    // Handle Change Password
+    document.getElementById('farmer-password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const currentPassword = document.getElementById('cur-pass').value;
+      const newPassword = document.getElementById('new-pass').value;
+      const confirm = document.getElementById('conf-pass').value;
+      if (newPassword !== confirm) {
+        showToast('New passwords do not match', 'error');
+        return;
+      }
+      try {
+        await fetchAPI('/api/account/change-password', {
+          method: 'POST',
+          body: { currentPassword, newPassword }
+        });
+        showToast('Password changed successfully', 'success');
+        e.target.reset();
+      } catch (err) { /* handled in fetchAPI */ }
     });
   </script>
 </body>

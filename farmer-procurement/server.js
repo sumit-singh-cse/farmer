@@ -39,6 +39,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"], // allow inline onclick=... handlers (Helmet default is 'none' which silently blocks all button clicks)
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
       connectSrc: ["'self'"],
@@ -112,7 +113,12 @@ const userSchema = new mongoose.Schema({
   state: { type: String },
   district: { type: String },
   adminId: { type: String, unique: true, sparse: true },
-  profileImage: { type: String, default: '' }
+  profileImage: { type: String, default: '' },
+  // --- New (additive) fields for multi-role hierarchy. All optional/defaulted so existing docs keep working ---
+  centre: { type: mongoose.Schema.Types.ObjectId, ref: 'Centre' }, // for centre operators
+  mustChangePassword: { type: Boolean, default: false },
+  active: { type: Boolean, default: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // which authority created this account
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
@@ -138,7 +144,11 @@ const centreSchema = new mongoose.Schema({
   district: { type: String, required: true },
   storageCapacity: { type: Number, required: true }, // in Quintals
   operatingHours: { type: String, default: '09:00 AM - 05:00 PM' },
-  slotsPerHour: { type: Number, default: 15 }
+  slotsPerHour: { type: Number, default: 15 },
+  // --- New (additive) fields. All optional/defaulted so existing centres keep working ---
+  operator: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // assigned centre operator
+  status: { type: String, enum: ['active', 'closed'], default: 'active' },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // district authority who created it
 }, { timestamps: true });
 const Centre = mongoose.model('Centre', centreSchema);
 
@@ -280,6 +290,8 @@ async function authenticateToken(req, res, next) {
 
 // Helper to determine the assigned centre ID for a centre operator
 async function getOperatorCentreId(user) {
+  // New multi-role operators have a direct centre reference — prefer it.
+  if (user.centre) return user.centre;
   if (user.adminId === 'OP-UJN-02') {
     const centre = await Centre.findOne({ centreId: 'C-UJN-01' });
     return centre ? centre._id : null;
@@ -300,6 +312,7 @@ mongoose.connect(MONGODB_URI)
     dbStatus = 'connected';
     await seedAdmins();
     await seedLocations();
+    await seedStateAuthorities();
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);
@@ -310,9 +323,9 @@ mongoose.connect(MONGODB_URI)
 async function seedAdmins() {
   try {
     const admins = [
-      { adminId: 'ST-MP-01', password: 'state123', role: 'state', mobile: '1000000001' },
-      { adminId: 'DT-IND-01', password: 'district123', role: 'district', mobile: '1000000002' },
-      { adminId: 'OP-UJN-02', password: 'operator123', role: 'centre', mobile: '1000000003' }
+      { adminId: 'ST-MP-01', password: 'state123', role: 'state', mobile: '1000000001', state: 'Madhya Pradesh' },
+      { adminId: 'DT-IND-01', password: 'district123', role: 'district', mobile: '1000000002', state: 'Madhya Pradesh', district: 'Indore' },
+      { adminId: 'OP-UJN-02', password: 'operator123', role: 'centre', mobile: '1000000003', state: 'Madhya Pradesh', district: 'Ujjain' }
     ];
 
     for (const adm of admins) {
@@ -323,14 +336,69 @@ async function seedAdmins() {
           adminId: adm.adminId,
           password: hashedPw,
           role: adm.role,
-          mobile: adm.mobile
+          mobile: adm.mobile,
+          state: adm.state,
+          district: adm.district
         });
         console.log(`Seeded admin: ${adm.adminId}`);
+      } else if (adm.state && (!existing.state || (adm.district && !existing.district))) {
+        // Backfill state/district on older seeded admins that predate the multi-role hierarchy
+        existing.state = existing.state || adm.state;
+        if (adm.district) existing.district = existing.district || adm.district;
+        await existing.save();
+        console.log(`Backfilled state/district for admin: ${adm.adminId}`);
       }
     }
     console.log('Administrative credentials check completed.');
   } catch (err) {
     console.error('Failed to seed admin records:', err);
+  }
+}
+
+// Map of state name -> short code used to build state authority IDs (ST-<code>)
+const STATE_CODES = {
+  'Andaman and Nicobar Islands': 'AN', 'Andhra Pradesh': 'AP', 'Arunachal Pradesh': 'AR',
+  'Assam': 'AS', 'Bihar': 'BR', 'Chandigarh': 'CH', 'Chhattisgarh': 'CG',
+  'Dadra and Nagar Haveli and Daman and Diu': 'DD', 'Delhi': 'DL', 'Goa': 'GA',
+  'Gujarat': 'GJ', 'Haryana': 'HR', 'Himachal Pradesh': 'HP', 'Jammu and Kashmir': 'JK',
+  'Jharkhand': 'JH', 'Karnataka': 'KA', 'Kerala': 'KL', 'Ladakh': 'LA', 'Lakshadweep': 'LD',
+  'Madhya Pradesh': 'MP', 'Maharashtra': 'MH', 'Manipur': 'MN', 'Meghalaya': 'ML',
+  'Mizoram': 'MZ', 'Nagaland': 'NL', 'Odisha': 'OD', 'Puducherry': 'PY', 'Punjab': 'PB',
+  'Rajasthan': 'RJ', 'Sikkim': 'SK', 'Tamil Nadu': 'TN', 'Telangana': 'TG', 'Tripura': 'TR',
+  'Uttar Pradesh': 'UP', 'Uttarakhand': 'UK', 'West Bengal': 'WB'
+};
+
+// Fallback: derive a code from the state name initials if not in the map
+function codeForState(stateName) {
+  if (!stateName) return 'XX';
+  if (STATE_CODES[stateName]) return STATE_CODES[stateName];
+  return stateName.split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase();
+}
+
+// Seed one state authority (role:'state', adminId ST-<code>) per Indian state, for testing.
+// Only creates missing ones — never overwrites existing accounts.
+async function seedStateAuthorities() {
+  try {
+    let created = 0;
+    for (const stateName of STATE_NAMES) {
+      const adminId = 'ST-' + codeForState(stateName);
+      const existing = await User.findOne({ adminId });
+      if (!existing) {
+        const hashedPw = await bcrypt.hash('state123', 10);
+        await User.create({
+          adminId,
+          password: hashedPw,
+          role: 'state',
+          state: stateName,
+          firstName: stateName,
+          lastName: 'State Authority'
+        });
+        created++;
+      }
+    }
+    console.log(`State authorities seeded: ${created} new (default password: state123). e.g. ST-UP, ST-MP`);
+  } catch (err) {
+    console.error('Failed to seed state authorities:', err);
   }
 }
 
@@ -1002,8 +1070,10 @@ app.post('/api/admin/login', async (req, res) => {
         id: admin._id,
         role: admin.role,
         adminId: admin.adminId,
+        name: [admin.firstName, admin.lastName].filter(Boolean).join(' '),
         state: admin.state || 'Madhya Pradesh', // Fallback for demo admins
-        district: admin.district || 'Indore' // Fallback for Indore admin
+        district: admin.district || 'Indore', // Fallback for Indore admin
+        mustChangePassword: admin.mustChangePassword === true
       }
     });
   } catch (error) {
@@ -1479,6 +1549,572 @@ app.patch('/api/admin/centres/:id', authenticateToken, async (req, res) => {
 });
 
 // Fallback to index.html for undefined routes
+// ===== PHASE 7: MULTI-ROLE HIERARCHY (State -> District -> Centre) =====
+// NEW additive endpoints. Existing routes above are untouched.
+
+// __PHASE7_ENDPOINTS__
+
+// Helper: short code from a district name (first letters, up to 3 chars)
+function codeForDistrict(name) {
+  const clean = (name || '').replace(/[^A-Za-z ]/g, '').trim();
+  const parts = clean.split(/\s+/);
+  if (parts.length > 1) return parts.map(w => w[0]).join('').slice(0, 3).toUpperCase();
+  return clean.slice(0, 3).toUpperCase();
+}
+
+// Generate a short human-friendly temporary password
+function generateTempPassword() {
+  return 'Tmp@' + Math.floor(1000 + Math.random() * 9000);
+}
+
+// ---- STATE: list ALL districts of my state, merged with district-authority info (live) ----
+app.get('/api/state/districts', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'state') {
+      return res.status(403).json({ error: 'Only state authorities can access this list' });
+    }
+    const stateName = req.user.state;
+
+    // 1. All districts of this state from the location data
+    const allDistricts = DISTRICTS_BY_STATE[(stateName || '').toLowerCase()] || [];
+
+    // 2. Any registered district-authority accounts in this state (keyed by district name)
+    const districtUsers = await User.find({ role: 'district', state: stateName });
+    const usersByDistrict = {};
+    districtUsers.forEach(u => { if (u.district) usersByDistrict[u.district.toLowerCase()] = u; });
+
+    // 3. Merge: show every district; fill authority details where an account exists
+    const list = await Promise.all(allDistricts.map(async (districtName) => {
+      const u = usersByDistrict[districtName.toLowerCase()];
+      const centreCount = await Centre.countDocuments({ state: stateName, district: districtName });
+      return {
+        id: u ? u._id : null,
+        district: districtName,
+        hasAuthority: !!u,
+        adminId: u ? u.adminId : null,
+        name: u ? ([u.firstName, u.lastName].filter(Boolean).join(' ') || '(no name set)') : '—',
+        mobile: u ? u.mobile : null,
+        active: u ? (u.active !== false) : null,
+        centreCount
+      };
+    }));
+
+    // Also surface any district-authority accounts whose district name isn't in the location list (safety)
+    districtUsers.forEach(u => {
+      if (u.district && !allDistricts.some(d => d.toLowerCase() === u.district.toLowerCase())) {
+        list.push({
+          id: u._id, district: u.district, hasAuthority: true, adminId: u.adminId,
+          name: [u.firstName, u.lastName].filter(Boolean).join(' ') || '(no name set)',
+          mobile: u.mobile, active: u.active !== false, centreCount: 0
+        });
+      }
+    });
+
+    return res.status(200).json({
+      state: stateName,
+      totalDistricts: list.length,
+      registeredAuthorities: districtUsers.length,
+      districts: list
+    });
+  } catch (error) {
+    console.error('State districts error:', error);
+    return res.status(500).json({ error: 'Failed to load districts' });
+  }
+});
+
+// __PHASE7_DISTRICT__
+
+// ---- DISTRICT: create a centre + its operator account ----
+app.post('/api/district/centres', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'district') {
+      return res.status(403).json({ error: 'Only district authorities can create centres' });
+    }
+    const { name, storageCapacity, operatingHours, slotsPerHour, operatorName, operatorMobile } = req.body;
+    if (!name || !storageCapacity || !operatorName || !operatorMobile) {
+      return res.status(400).json({ error: 'Centre name, storage capacity, operator name and operator mobile are required' });
+    }
+    if (!/^[0-9]{10}$/.test(operatorMobile)) {
+      return res.status(400).json({ error: 'Operator mobile must be a 10-digit number' });
+    }
+
+    const state = req.user.state;
+    const district = req.user.district;
+    if (!state || !district) {
+      return res.status(400).json({ error: 'Your district account is missing state/district info. Please re-login (accounts are auto-updated on server restart).' });
+    }
+    // Build centre ID: CN-<stateCode>-<distCode>-NN
+    const stCode = codeForState(state);
+    const dtCode = codeForDistrict(district);
+    const existingInDist = await Centre.countDocuments({ state, district });
+    const seq = String(existingInDist + 1).padStart(2, '0');
+    let centreId = `CN-${stCode}-${dtCode}-${seq}`;
+    // Guard against collision
+    while (await Centre.findOne({ centreId })) {
+      centreId = `CN-${stCode}-${dtCode}-${String(Math.floor(10 + Math.random() * 89))}`;
+    }
+
+    // The operator logs in with the centre ID as their adminId
+    if (await User.findOne({ adminId: centreId })) {
+      return res.status(409).json({ error: 'A centre with that generated ID already exists, please retry' });
+    }
+    // Operator mobile must be unique across all users (schema enforces unique+sparse)
+    if (await User.findOne({ mobile: operatorMobile })) {
+      return res.status(409).json({ error: 'That mobile number is already registered to another user. Use a different operator mobile.' });
+    }
+
+    const centre = new Centre({
+      centreId, name, state, district,
+      storageCapacity: Number(storageCapacity),
+      operatingHours: operatingHours || '09:00 AM - 05:00 PM',
+      slotsPerHour: slotsPerHour ? Number(slotsPerHour) : 15,
+      status: 'active',
+      createdBy: req.user._id
+    });
+    await centre.save();
+
+    const tempPassword = generateTempPassword();
+    const hashedPw = await bcrypt.hash(tempPassword, 10);
+    const [opFirst, ...opRest] = operatorName.trim().split(/\s+/);
+    const operator = await User.create({
+      adminId: centreId,
+      password: hashedPw,
+      role: 'centre',
+      mobile: operatorMobile,
+      firstName: opFirst,
+      lastName: opRest.join(' '),
+      state, district,
+      centre: centre._id,
+      mustChangePassword: true,
+      createdBy: req.user._id
+    });
+    centre.operator = operator._id;
+    await centre.save();
+
+    // Demo mode: "send" the temp password to operator mobile (we just return/log it)
+    console.log(`[Success] Centre ${centreId} created by ${req.user.adminId}. Operator temp password: ${tempPassword}`);
+    return res.status(201).json({
+      status: 'success',
+      message: 'Centre and operator created successfully',
+      centre: { id: centre._id, centreId, name, district },
+      operator: { name: operatorName, mobile: operatorMobile, loginId: centreId },
+      tempPassword, // demo: shown so it can be shared; real system would SMS this
+      demo: true
+    });
+  } catch (error) {
+    console.error('Create centre error:', error);
+    if (error && error.code === 11000) {
+      return res.status(409).json({ error: 'Duplicate value (mobile or ID already exists). Try a different operator mobile.' });
+    }
+    return res.status(500).json({ error: 'Failed to create centre' });
+  }
+});
+
+// __PHASE7_DISTRICT2__
+
+// ---- DISTRICT: list centres in my district (with operator name + quick stats) ----
+app.get('/api/district/centres', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'district') {
+      return res.status(403).json({ error: 'Only district authorities can view this list' });
+    }
+    const centres = await Centre.find({ state: req.user.state, district: req.user.district })
+      .populate('operator', 'firstName lastName mobile adminId active')
+      .sort({ createdAt: -1 });
+
+    const list = await Promise.all(centres.map(async (c) => {
+      const totalBookings = await Booking.countDocuments({ centre: c._id });
+      const op = c.operator;
+      return {
+        id: c._id,
+        centreId: c.centreId,
+        name: c.name,
+        status: c.status || 'active',
+        storageCapacity: c.storageCapacity,
+        operatorName: op ? [op.firstName, op.lastName].filter(Boolean).join(' ') : '(none)',
+        operatorLoginId: op ? op.adminId : null,
+        operatorMobile: op ? op.mobile : null,
+        totalBookings
+      };
+    }));
+    return res.status(200).json({ district: req.user.district, centres: list });
+  } catch (error) {
+    console.error('District centres error:', error);
+    return res.status(500).json({ error: 'Failed to load centres' });
+  }
+});
+
+// ---- DISTRICT: detail + stats for one centre ----
+app.get('/api/district/centres/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'district') {
+      return res.status(403).json({ error: 'Only district authorities can view centre details' });
+    }
+    const centre = await Centre.findById(req.params.id).populate('operator', 'firstName lastName mobile adminId active');
+    if (!centre) return res.status(404).json({ error: 'Centre not found' });
+    if (centre.district !== req.user.district || centre.state !== req.user.state) {
+      return res.status(403).json({ error: 'This centre is not in your district' });
+    }
+
+    const bookings = await Booking.find({ centre: centre._id });
+    const totalBookings = bookings.length;
+    const completed = bookings.filter(b => b.status === 'Completed').length;
+    const active = bookings.filter(b => ['Booked', 'Arrived', 'Processing'].includes(b.status)).length;
+    // Total quantity procured (accepted) at this centre
+    const bookingIds = bookings.map(b => b._id);
+    const procs = await Procurement.find({ booking: { $in: bookingIds } });
+    const totalProcured = procs.reduce((s, p) => s + (p.acceptedQuantity || 0), 0);
+    const op = centre.operator;
+
+    return res.status(200).json({
+      id: centre._id,
+      centreId: centre.centreId,
+      name: centre.name,
+      state: centre.state,
+      district: centre.district,
+      status: centre.status || 'active',
+      storageCapacity: centre.storageCapacity,
+      operatingHours: centre.operatingHours,
+      slotsPerHour: centre.slotsPerHour,
+      operator: op ? {
+        userId: op._id,
+        name: [op.firstName, op.lastName].filter(Boolean).join(' '),
+        loginId: op.adminId,
+        mobile: op.mobile,
+        active: op.active !== false
+      } : null,
+      stats: {
+        totalBookings, completed, active,
+        totalProcured: Math.round(totalProcured * 100) / 100,
+        storageUsedPct: centre.storageCapacity ? Math.min(100, Math.round((totalProcured / centre.storageCapacity) * 100)) : 0
+      }
+    });
+  } catch (error) {
+    console.error('Centre detail error:', error);
+    return res.status(500).json({ error: 'Failed to load centre detail' });
+  }
+});
+
+// __PHASE7_DISTRICT3__
+
+// ---- DISTRICT: close / reopen a centre ----
+app.patch('/api/district/centres/:id/status', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'district') {
+      return res.status(403).json({ error: 'Only district authorities can change centre status' });
+    }
+    const { status } = req.body;
+    if (!['active', 'closed'].includes(status)) {
+      return res.status(400).json({ error: 'Status must be "active" or "closed"' });
+    }
+    const centre = await Centre.findById(req.params.id);
+    if (!centre) return res.status(404).json({ error: 'Centre not found' });
+    if (centre.district !== req.user.district || centre.state !== req.user.state) {
+      return res.status(403).json({ error: 'This centre is not in your district' });
+    }
+    centre.status = status;
+    await centre.save();
+    console.log(`[Success] Centre ${centre.centreId} set to ${status} by ${req.user.adminId}`);
+    return res.status(200).json({ status: 'success', message: `Centre ${status === 'closed' ? 'closed' : 'reopened'} successfully`, centreStatus: status });
+  } catch (error) {
+    console.error('Centre status error:', error);
+    return res.status(500).json({ error: 'Failed to update centre status' });
+  }
+});
+
+// ---- DISTRICT: reset a user's password (centre operator or farmer in my district) ----
+app.post('/api/district/reset-password', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'district') {
+      return res.status(403).json({ error: 'Only district authorities can reset passwords' });
+    }
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    const target = await User.findById(userId);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if (target.role === 'state') {
+      return res.status(403).json({ error: 'You cannot reset a state authority password' });
+    }
+    // Scope: only users within the same district (centre operators / farmers)
+    if (target.district && target.district !== req.user.district) {
+      return res.status(403).json({ error: 'This user is not in your district' });
+    }
+    const tempPassword = generateTempPassword();
+    target.password = await bcrypt.hash(tempPassword, 10);
+    target.mustChangePassword = true;
+    await target.save();
+    console.log(`[Success] Password reset for ${target.adminId || target.mobile} by ${req.user.adminId}`);
+    return res.status(200).json({
+      status: 'success',
+      message: 'Password reset. Share the temporary password with the user.',
+      tempPassword,
+      demo: true
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// __PHASE7_CENTRE__
+
+// ---- CENTRE: list all bookings for my centre (optional ?token= search) ----
+app.get('/api/centre/bookings', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'centre') {
+      return res.status(403).json({ error: 'Only centre operators can view bookings' });
+    }
+    const centreId = await getOperatorCentreId(req.user);
+    if (!centreId) return res.status(404).json({ error: 'Assigned centre not found for operator' });
+
+    const filter = { centre: centreId };
+    if (req.query.token) filter.tokenNumber = req.query.token.trim();
+
+    const bookings = await Booking.find(filter)
+      .populate('farmer', 'firstName lastName mobile')
+      .populate('land', 'khasraNumber')
+      .sort({ date: -1, queuePosition: 1 });
+
+    const list = bookings.map(b => ({
+      id: b._id,
+      tokenNumber: b.tokenNumber,
+      farmerName: b.farmer ? `${b.farmer.firstName} ${b.farmer.lastName}` : 'N/A',
+      farmerMobile: b.farmer ? b.farmer.mobile : null,
+      cropType: b.produceType,
+      quantity: b.quantity,
+      date: b.date,
+      timeWindow: b.timeWindow,
+      status: b.status,
+      queuePosition: b.queuePosition,
+      landKhasra: b.land ? b.land.khasraNumber : 'N/A'
+    }));
+    const centre = await Centre.findById(centreId);
+    return res.status(200).json({
+      centre: { id: centre._id, centreId: centre.centreId, name: centre.name, status: centre.status || 'active' },
+      count: list.length,
+      bookings: list
+    });
+  } catch (error) {
+    console.error('Centre bookings error:', error);
+    return res.status(500).json({ error: 'Failed to load bookings' });
+  }
+});
+
+// ---- CENTRE: single booking detail by token ----
+app.get('/api/centre/bookings/token/:token', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'centre') {
+      return res.status(403).json({ error: 'Only centre operators can view bookings' });
+    }
+    const centreId = await getOperatorCentreId(req.user);
+    const booking = await Booking.findOne({ tokenNumber: req.params.token.trim(), centre: centreId })
+      .populate('farmer', 'firstName lastName mobile')
+      .populate('land', 'khasraNumber cropType');
+    if (!booking) return res.status(404).json({ error: 'No booking with that token at your centre' });
+    return res.status(200).json({
+      id: booking._id,
+      tokenNumber: booking.tokenNumber,
+      farmerName: booking.farmer ? `${booking.farmer.firstName} ${booking.farmer.lastName}` : 'N/A',
+      farmerMobile: booking.farmer ? booking.farmer.mobile : null,
+      cropType: booking.produceType,
+      bookedQuantity: booking.quantity,
+      date: booking.date,
+      timeWindow: booking.timeWindow,
+      status: booking.status,
+      landKhasra: booking.land ? booking.land.khasraNumber : 'N/A'
+    });
+  } catch (error) {
+    console.error('Booking by token error:', error);
+    return res.status(500).json({ error: 'Failed to load booking' });
+  }
+});
+
+// __PHASE7_PROC__
+
+// ---- CENTRE: step 1 — operator submits weights, OTP sent to farmer's mobile ----
+app.post('/api/centre/procurement/start-otp', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'centre') {
+      return res.status(403).json({ error: 'Only centre operators can start procurement' });
+    }
+    const { bookingId } = req.body;
+    if (!bookingId) return res.status(400).json({ error: 'bookingId is required' });
+
+    const booking = await Booking.findById(bookingId).populate('farmer', 'mobile firstName');
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const centreId = await getOperatorCentreId(req.user);
+    if (!centreId || !booking.centre.equals(centreId)) {
+      return res.status(403).json({ error: 'Booking does not belong to your centre' });
+    }
+    if (booking.status === 'Completed') {
+      return res.status(400).json({ error: 'This booking is already completed' });
+    }
+    if (!booking.farmer || !booking.farmer.mobile) {
+      return res.status(400).json({ error: 'Farmer mobile not found for OTP' });
+    }
+
+    // Move to Processing if still Booked/Arrived
+    if (booking.status !== 'Processing') {
+      booking.status = 'Processing';
+      await booking.save();
+    }
+
+    // Demo OTP (fixed) stored against the farmer's mobile
+    const code = '123456';
+    otpStore.set(booking.farmer.mobile, { code, expiresAt: Date.now() + 30 * 60 * 1000, attempts: 0 });
+    console.log(`[Demo] Procurement OTP for token ${booking.tokenNumber} sent to farmer ${booking.farmer.mobile}: ${code}`);
+    return res.status(200).json({
+      status: 'success',
+      message: `OTP sent to farmer's mobile (${booking.farmer.mobile})`,
+      farmerMobile: booking.farmer.mobile,
+      code, // demo mode
+      demo: true
+    });
+  } catch (error) {
+    console.error('Start procurement OTP error:', error);
+    return res.status(500).json({ error: 'Failed to start procurement' });
+  }
+});
+
+// __PHASE7_PROC2__
+
+// ---- CENTRE: step 2 — farmer gives OTP, procurement is confirmed & completed ----
+app.post('/api/centre/procurement/confirm', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'centre') {
+      return res.status(403).json({ error: 'Only centre operators can confirm procurement' });
+    }
+    const { bookingId, otp, actualWeight, acceptedQuantity, rejectedQuantity, rejectionReason } = req.body;
+    if (!bookingId || otp === undefined || actualWeight === undefined || acceptedQuantity === undefined) {
+      return res.status(400).json({ error: 'bookingId, otp, actualWeight and acceptedQuantity are required' });
+    }
+
+    const booking = await Booking.findById(bookingId).populate('farmer', 'mobile').populate('centre');
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const centreId = await getOperatorCentreId(req.user);
+    if (!centreId || !booking.centre._id.equals(centreId)) {
+      return res.status(403).json({ error: 'Booking does not belong to your centre' });
+    }
+    if (booking.status === 'Completed') {
+      return res.status(400).json({ error: 'This booking is already completed' });
+    }
+
+    // Verify OTP against farmer's mobile
+    const rec = otpStore.get(booking.farmer.mobile);
+    if (!rec || rec.code !== String(otp) || rec.expiresAt < Date.now()) {
+      return res.status(400).json({ error: 'Invalid or expired farmer OTP' });
+    }
+    otpStore.delete(booking.farmer.mobile);
+
+    const aw = parseFloat(actualWeight), aq = parseFloat(acceptedQuantity), rq = parseFloat(rejectedQuantity) || 0;
+    if (aw < 0 || aq < 0 || rq < 0) return res.status(400).json({ error: 'Quantities cannot be negative' });
+    if (aq + rq > aw + 0.1) return res.status(400).json({ error: 'Accepted + Rejected cannot exceed actual weight' });
+
+    const procurement = await Procurement.create({
+      booking: booking._id,
+      expectedQuantity: booking.quantity,
+      actualWeight: aw,
+      acceptedQuantity: aq,
+      rejectedQuantity: rq,
+      rejectionReason: rejectionReason || '',
+      recordedBy: req.user._id
+    });
+
+    const crop = (booking.produceType || '').toLowerCase();
+    const ratePerQuintal = crop === 'rice' ? 2183 : crop === 'wheat' ? 2275 : 2000;
+    const amount = Math.round(aq * ratePerQuintal * 100) / 100;
+    await Payment.create({
+      procurement: procurement._id,
+      farmer: booking.farmer._id,
+      acceptedQuantity: aq,
+      ratePerQuintal, amount, status: 'Pending'
+    });
+
+    booking.status = 'Completed';
+    await booking.save();
+
+    console.log(`[Success] Procurement completed via OTP: Token=${booking.tokenNumber}, Actual=${aw}, Accepted=${aq}`);
+    return res.status(201).json({
+      status: 'success',
+      message: 'Procurement confirmed and completed',
+      summary: {
+        tokenNumber: booking.tokenNumber,
+        bookedQuantity: booking.quantity,
+        actualWeight: aw,
+        acceptedQuantity: aq,
+        rejectedQuantity: rq,
+        ratePerQuintal,
+        amount
+      }
+    });
+  } catch (error) {
+    console.error('Confirm procurement error:', error);
+    return res.status(500).json({ error: 'Failed to confirm procurement' });
+  }
+});
+
+// __PHASE7_COMMON__
+
+// ---- COMMON: change own password (any logged-in user: farmer / state / district / centre) ----
+app.post('/api/account/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+    const match = await bcrypt.compare(currentPassword, req.user.password);
+    if (!match) return res.status(400).json({ error: 'Current password is incorrect' });
+
+    req.user.password = await bcrypt.hash(newPassword, 10);
+    req.user.mustChangePassword = false;
+    await req.user.save();
+    console.log(`[Success] Password changed for ${req.user.adminId || req.user.mobile}`);
+    return res.status(200).json({ status: 'success', message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    return res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// ---- COMMON: change own login ID (state / district / centre authorities only) ----
+app.post('/api/account/change-id', authenticateToken, async (req, res) => {
+  try {
+    if (!['state', 'district', 'centre'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Only authority accounts can change their login ID' });
+    }
+    const { newAdminId, password } = req.body;
+    if (!newAdminId || !password) {
+      return res.status(400).json({ error: 'New login ID and current password are required' });
+    }
+    const cleanId = newAdminId.trim();
+    if (cleanId.length < 3) return res.status(400).json({ error: 'Login ID must be at least 3 characters' });
+
+    const match = await bcrypt.compare(password, req.user.password);
+    if (!match) return res.status(400).json({ error: 'Password is incorrect' });
+
+    const exists = await User.findOne({ adminId: cleanId, _id: { $ne: req.user._id } });
+    if (exists) return res.status(409).json({ error: 'That login ID is already taken' });
+
+    req.user.adminId = cleanId;
+    await req.user.save();
+    console.log(`[Success] Login ID changed to ${cleanId}`);
+    return res.status(200).json({
+      status: 'success',
+      message: 'Login ID changed. Please log in again with your new ID.',
+      newAdminId: cleanId,
+      reloginRequired: true
+    });
+  } catch (error) {
+    console.error('Change ID error:', error);
+    return res.status(500).json({ error: 'Failed to change login ID' });
+  }
+});
+
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API endpoint not found' });
