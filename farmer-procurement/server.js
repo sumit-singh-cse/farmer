@@ -28,38 +28,21 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/farmer
 // Helmet for security headers
 app.use(helmet());
 
-// Rate limiting for API endpoints - selective, not global
+// Rate limiting temporarily disabled for demo - will re-enable later
+/*
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes default
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Increased from 10 to 100
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later'
-  },
-  skip: (req) => {
-    // Skip rate limiting for read-only operations (GET requests to public data)
-    return req.method === 'GET' && (
-      req.path.startsWith('/api/states') ||
-      req.path.startsWith('/api/districts') ||
-      req.path.startsWith('/api/centres')
-    );
   }
 });
 
-// Apply rate limiting to sensitive operations only
 app.use(limiter);
-
-// Limit OTP endpoint more strictly (prevent abuse)
-const otpLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // 5 OTP requests per hour
-  message: {
-    success: false,
-    error: 'Too many OTP requests. Please try again after 1 hour.'
-  }
-});
+*/
 
 // ========================================
 // APP CONFIGURATION
@@ -768,8 +751,7 @@ app.get('/api/status/:token', async (req, res) => {
 });
 
 // Request Mobile OTP - Now uses Fast2SMS API for real SMS
-// Rate limited to prevent abuse (5 requests per hour)
-app.post('/api/send-otp', otpLimiter, async (req, res) => {
+app.post('/api/send-otp', async (req, res) => {
   const { mobile } = req.body;
 
   // Validate mobile number
