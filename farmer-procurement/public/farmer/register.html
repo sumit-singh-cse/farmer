@@ -117,59 +117,58 @@
   <script src="../common/common.js"></script>
   <script src="../common/navbar.js"></script>
   <script>
-    let locationsData = {};
-
-    // Load locations data from JSON
-    async function loadLocationsData() {
-      try {
-        const response = await fetch('../data/locations.json');
-        locationsData = await response.json();
-        populateStates();
-      } catch (error) {
-        console.error('Failed to load locations data:', error);
-        // Fallback to API if JSON fails
-        loadStatesFromAPI();
-      }
-    }
-
-    function populateStates() {
-      const stateSel = document.getElementById('state');
-      if (!stateSel) {
-        console.error('State select not found');
-        return;
-      }
-      stateSel.innerHTML = '<option value="">-- Select State --</option>';
-      if (locationsData.states) {
-        locationsData.states.forEach(state => {
-          stateSel.innerHTML += `<option value="${state}">${state}</option>`;
-        });
-      }
-    }
-
-    async function loadStatesFromAPI() {
-      try {
-        const states = await fetchAPI('/api/states');
-        const stateSel = document.getElementById('state');
-        stateSel.innerHTML = '<option value="">-- Select State --</option>';
-        states.forEach(state => {
-          stateSel.innerHTML += `<option value="${state.name}">${state.name}</option>`;
-        });
-      } catch (err) {
-        console.error('Failed to load states from API:', err);
-      }
-    }
-
-    // Initialize on page load
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', loadLocationsData);
-    } else {
-      loadLocationsData();
-    }
-
     const sendBtn = document.getElementById('reg-send-otp');
     const otpGroup = document.getElementById('reg-otp-group');
     const stateSel = document.getElementById('state');
     const distSel = document.getElementById('district');
+
+    // Load states from API (database)
+    async function loadStatesFromAPI() {
+      try {
+        console.log('Loading states from API...');
+        const states = await fetchAPI('/api/states');
+        console.log('States received:', states.length);
+
+        stateSel.innerHTML = '<option value="">-- Select State --</option>';
+        states.forEach(state => {
+          const stateName = state.name || state;
+          stateSel.innerHTML += `<option value="${stateName}">${stateName}</option>`;
+        });
+      } catch (err) {
+        console.error('Failed to load states:', err);
+        showToast('Failed to load states. Please refresh.', 'error');
+      }
+    }
+
+    // Load districts for selected state
+    async function loadDistrictsForState(stateName) {
+      try {
+        console.log('Loading districts for state:', stateName);
+        distSel.innerHTML = '<option value="">-- Loading Districts --</option>';
+
+        const districts = await fetchAPI(`/api/districts/${encodeURIComponent(stateName)}`);
+        console.log('Districts received:', districts.length);
+
+        distSel.innerHTML = '<option value="">-- Select District --</option>';
+        districts.forEach(dist => {
+          const distName = dist.name || dist;
+          distSel.innerHTML += `<option value="${distName}">${distName}</option>`;
+        });
+
+        if (districts.length === 0) {
+          distSel.innerHTML = '<option value="">No districts found</option>';
+        }
+      } catch (err) {
+        console.error('Failed to load districts:', err);
+        showToast('Failed to load districts', 'error');
+      }
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Page loaded, loading states...');
+      loadStatesFromAPI();
+    });
 
     sendBtn.addEventListener('click', () => {
       const mob = document.getElementById('mobile').value;
@@ -184,36 +183,21 @@
         showToast(data.message, 'success');
         otpGroup.style.display = 'block';
         document.getElementById('otp').setAttribute('required', 'required');
-        // Show OTP in alert
         if (data.code) {
           console.log('📱 Demo OTP:', data.code);
           alert(`📱 Demo OTP: ${data.code}`);
         }
       }).catch(err => {
-        // Handled in fetchAPI
+        console.error('OTP Error:', err);
       });
     });
 
     stateSel.addEventListener('change', () => {
-      distSel.innerHTML = '<option value="">-- Select District --</option>';
-      if (!stateSel.value) return;
-
-      // Load districts from JSON
-      if (locationsData.districts && locationsData.districts[stateSel.value]) {
-        const districts = locationsData.districts[stateSel.value];
-        districts.forEach(dist => {
-          distSel.innerHTML += `<option value="${dist}">${dist}</option>`;
-        });
-      } else {
-        // Fallback to API if not in JSON
-        fetchAPI(`/api/districts/${encodeURIComponent(stateSel.value)}`)
-          .then(districts => {
-            districts.forEach(dist => {
-              distSel.innerHTML += `<option value="${dist.name}">${dist.name}</option>`;
-            });
-          })
-          .catch(err => console.error('Failed to load districts:', err));
+      if (!stateSel.value) {
+        distSel.innerHTML = '<option value="">-- Select District --</option>';
+        return;
       }
+      loadDistrictsForState(stateSel.value);
     });
 
     document.getElementById('farmer-register-form').addEventListener('submit', (e) => {
@@ -247,7 +231,7 @@
           window.location.href = 'login.html';
         }, 1500);
       }).catch(err => {
-        // Handled in fetchAPI
+        console.error('Registration Error:', err);
       });
     });
   </script>

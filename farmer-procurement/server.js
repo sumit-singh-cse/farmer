@@ -20,7 +20,7 @@ const { sendWhatsAppAlert } = require('./whatsapp');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://singhkhushbu8127_db_user:yrzloXBAmyi7OZcr@cluster0.rurxuuk.mongodb.net/farmer_procurement?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/farmer_procurement';
 
 // ========================================
 // SECURITY MIDDLEWARE
