@@ -205,6 +205,34 @@ const Payment = mongoose.model('Payment', paymentSchema);
 // In-memory OTP Store for demo verification (Expires in 5 minutes)
 const otpStore = new Map();
 
+// ========================================
+// STATES & DISTRICTS DATA SOURCE
+// ========================================
+// Full list of all Indian states/UTs and their districts is loaded from a static
+// JSON file. This is the single source of truth for the registration dropdowns,
+// so all 36 states and their 598 districts are always available regardless of
+// what is (or isn't) seeded in MongoDB. Format: [{ state, districts: [...] }, ...]
+let STATE_DISTRICTS = [];        // raw array
+let STATE_NAMES = [];            // sorted state name list
+const DISTRICTS_BY_STATE = {};   // lowercased state name -> sorted districts
+try {
+  const locPath = path.join(__dirname, 'public', 'data', 'india-states-districts.json');
+  STATE_DISTRICTS = JSON.parse(fs.readFileSync(locPath, 'utf-8'));
+  STATE_NAMES = STATE_DISTRICTS
+    .map(s => s.state)
+    .sort((a, b) => a.localeCompare(b));
+  STATE_DISTRICTS.forEach(s => {
+    DISTRICTS_BY_STATE[s.state.toLowerCase()] = [...s.districts].sort((a, b) => a.localeCompare(b));
+  });
+  const totalDistricts = STATE_DISTRICTS.reduce((n, s) => n + s.districts.length, 0);
+  console.log(`Loaded location data: ${STATE_NAMES.length} states, ${totalDistricts} districts`);
+} catch (e) {
+  console.error('Could not load india-states-districts.json:', e.message);
+}
+
+// True only when Mongoose has a live, ready connection
+const isDbConnected = () => mongoose.connection.readyState === 1;
+
 // --- AUTHENTICATION MIDDLEWARE (JWT + Mock for backwards compatibility) ---
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -374,10 +402,11 @@ app.get('/api/debug-db', async (req, res) => {
   }
 });
 
-// GET States
+// GET States - served from the full static list (all Indian states/UTs)
 app.get('/api/states', async (req, res) => {
   try {
-    const states = await State.find().sort({ name: 1 });
+    // Return as [{ name }] objects; the frontend also accepts plain strings.
+    const states = STATE_NAMES.map(name => ({ name }));
     return res.status(200).json(states);
   } catch (error) {
     console.error(error);
@@ -385,21 +414,15 @@ app.get('/api/states', async (req, res) => {
   }
 });
 
-// GET Districts by State
+// GET Districts by State - served from the full static list
 app.get('/api/districts/:stateName', async (req, res) => {
   try {
     let { stateName } = req.params;
     if (stateName.toLowerCase() === 'up') stateName = 'Uttar Pradesh';
-    
-    // Find state document matching the name case-insensitively
-    const stateDoc = await State.findOne({ name: { $regex: new RegExp('^' + stateName + '$', 'i') } });
-    if (!stateDoc) {
-      return res.status(200).json([]);
-    }
-    
-    // Find districts referencing the state ObjectId
-    const districts = await District.find({ state: stateDoc._id }).sort({ name: 1 });
-    return res.status(200).json(districts);
+    if (stateName.toLowerCase() === 'mp') stateName = 'Madhya Pradesh';
+
+    const districts = DISTRICTS_BY_STATE[stateName.trim().toLowerCase()] || [];
+    return res.status(200).json(districts.map(name => ({ name })));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Failed to retrieve districts list' });
