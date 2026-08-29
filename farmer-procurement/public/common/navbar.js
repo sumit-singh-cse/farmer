@@ -29,18 +29,19 @@ function injectNavbar() {
       // Admin menu — differentiated per role
       let dashboardUrl = `${prefix}admin/state-dashboard.html`;
       let roleLabel = 'State Authority';
-      let badgeColor = '#1d4ed8'; // state = blue
-      if (user.role === 'district') { dashboardUrl = `${prefix}admin/district-dashboard.html`; roleLabel = 'District Authority'; badgeColor = '#b45309'; } // district = amber
-      if (user.role === 'centre')   { dashboardUrl = `${prefix}admin/centre-dashboard.html`;   roleLabel = 'Centre Operator';  badgeColor = '#047857'; } // centre = green
+      if (user.role === 'district') { dashboardUrl = `${prefix}admin/district-dashboard.html`; roleLabel = 'District Authority'; }
+      if (user.role === 'centre')   { dashboardUrl = `${prefix}admin/centre-dashboard.html`;   roleLabel = 'Centre Operator'; }
 
-      const badge = `<li style="display:flex;align-items:center;"><span style="background:${badgeColor};color:#fff;padding:0.25rem 0.7rem;border-radius:50px;font-size:0.72rem;font-weight:700;letter-spacing:0.02em;">${roleLabel}${user.adminId ? ' · ' + user.adminId : ''}</span></li>`;
+      const badge = `<li class="admin-idbadge">
+        <span class="admin-idbadge-role">${roleLabel}</span>
+        ${user.adminId ? `<span class="admin-idbadge-id">${user.adminId}</span>` : ''}
+      </li>`;
 
       menuHtml = `
         ${badge}
         <li><a href="${dashboardUrl}" class="nav-link">Admin Panel</a></li>
-        <li><a href="${prefix}admin/account.html" class="nav-link">⚙️ Account</a></li>
-        <li><a href="${prefix}support.html" class="nav-link">Support</a></li>
-        <li><a href="#" id="logout-btn" class="nav-link nav-btn-cta">Logout</a></li>
+        <li><a href="${prefix}admin/account.html" class="nav-link">Account</a></li>
+        <li><a href="#" id="logout-btn" class="nav-link nav-btn-cta">Sign out</a></li>
       `;
     }
   } else {

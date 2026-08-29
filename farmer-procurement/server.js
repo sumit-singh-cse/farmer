@@ -1687,6 +1687,124 @@ app.get('/api/state/districts', authenticateToken, async (req, res) => {
   }
 });
 
+// ---- STATE: full detail for ONE district of my state (additive, read-only) ----
+app.get('/api/state/districts/:district', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'state') {
+      return res.status(403).json({ error: 'Only state authorities can access district details' });
+    }
+    const stateName = req.user.state;
+    const districtName = (req.params.district || '').trim();
+    if (!districtName) return res.status(400).json({ error: 'District name is required' });
+
+    // Case-insensitive exact match on the district name
+    const esc = districtName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const nameRx = new RegExp('^' + esc + '$', 'i');
+
+    // Canonical name from the location list (so casing in the UI is consistent)
+    const allDistricts = DISTRICTS_BY_STATE[(stateName || '').toLowerCase()] || [];
+    const canonical = allDistricts.find(d => d.toLowerCase() === districtName.toLowerCase()) || districtName;
+
+    // 1. District authority account (may not exist yet)
+    const u = await User.findOne({ role: 'district', state: stateName, district: nameRx });
+    const authority = u ? {
+      id: u._id,
+      adminId: u.adminId,
+      name: [u.firstName, u.lastName].filter(Boolean).join(' ') || '(no name set)',
+      mobile: u.mobile || null,
+      active: u.active !== false
+    } : null;
+
+    // 2. Centres in this district
+    const centres = await Centre.find({ state: stateName, district: nameRx }).populate('operator');
+    const centreIds = centres.map(c => c._id);
+
+    const bookings = centreIds.length ? await Booking.find({ centre: { $in: centreIds } }) : [];
+    const bookingIds = bookings.map(b => b._id);
+    const procurements = bookingIds.length ? await Procurement.find({ booking: { $in: bookingIds } }) : [];
+    const procIds = procurements.map(p => p._id);
+    const payments = procIds.length ? await Payment.find({ procurement: { $in: procIds } }) : [];
+
+    // Index for quick per-centre roll-ups
+    const procByBooking = {};
+    procurements.forEach(p => { procByBooking[String(p.booking)] = p; });
+    const payByProc = {};
+    payments.forEach(p => { payByProc[String(p.procurement)] = p; });
+
+    const perCentre = {};
+    centres.forEach(c => {
+      perCentre[String(c._id)] = { bookings: 0, completed: 0, procured: 0, released: 0, pending: 0 };
+    });
+
+    const farmerSet = new Set();
+    bookings.forEach(b => {
+      const key = String(b.centre);
+      const row = perCentre[key];
+      if (!row) return;
+      row.bookings++;
+      if (b.farmer) farmerSet.add(String(b.farmer));
+      const proc = procByBooking[String(b._id)];
+      if (!proc) return;
+      row.completed++;
+      row.procured += proc.acceptedQuantity || 0;
+      const pay = payByProc[String(proc._id)];
+      if (!pay) return;
+      if (pay.status === 'Released') row.released += pay.amount || 0;
+      else row.pending += pay.amount || 0;
+    });
+
+    const centreList = centres.map(c => {
+      const s = perCentre[String(c._id)] || { bookings: 0, completed: 0, procured: 0, released: 0, pending: 0 };
+      const cap = c.storageCapacity || 0;
+      return {
+        id: c._id,
+        centreId: c.centreId || null,
+        name: c.name,
+        storageCapacity: cap,
+        operatingHours: c.operatingHours || '—',
+        slotsPerHour: c.slotsPerHour || 0,
+        status: c.status || 'active',
+        operatorName: c.operator ? ([c.operator.firstName, c.operator.lastName].filter(Boolean).join(' ') || '(no name set)') : '—',
+        operatorMobile: c.operator ? (c.operator.mobile || null) : null,
+        operatorId: c.operator ? (c.operator.adminId || null) : null,
+        bookings: s.bookings,
+        completed: s.completed,
+        procured: s.procured,
+        released: s.released,
+        pending: s.pending,
+        utilisation: cap > 0 ? Number(((s.procured / cap) * 100).toFixed(1)) : 0
+      };
+    });
+
+    const totals = centreList.reduce((t, c) => ({
+      centresCount: t.centresCount + 1,
+      activeCentres: t.activeCentres + (c.status !== 'closed' ? 1 : 0),
+      storageCapacity: t.storageCapacity + c.storageCapacity,
+      procured: t.procured + c.procured,
+      released: t.released + c.released,
+      pending: t.pending + c.pending,
+      bookings: t.bookings + c.bookings,
+      completed: t.completed + c.completed
+    }), { centresCount: 0, activeCentres: 0, storageCapacity: 0, procured: 0, released: 0, pending: 0, bookings: 0, completed: 0 });
+
+    totals.utilisation = totals.storageCapacity > 0
+      ? Number(((totals.procured / totals.storageCapacity) * 100).toFixed(1)) : 0;
+    totals.farmersServed = farmerSet.size;
+    totals.pendingCount = payments.filter(p => p.status === 'Pending').length;
+
+    return res.status(200).json({
+      state: stateName,
+      district: canonical,
+      authority,
+      totals,
+      centres: centreList
+    });
+  } catch (error) {
+    console.error('State district detail error:', error);
+    return res.status(500).json({ error: 'Failed to load district details' });
+  }
+});
+
 // __PHASE7_DISTRICT__
 
 // ---- DISTRICT: create a centre + its operator account ----

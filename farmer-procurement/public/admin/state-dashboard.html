@@ -3,282 +3,417 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>State Admin Dashboard - Farmer Procurement Hub</title>
+  <title>State Administration - Farmer Procurement Hub</title>
   <link rel="stylesheet" href="../common/style.css">
   <link rel="stylesheet" href="admin.css">
   <style>
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+    /* Dialog + inline table styling (shared look with the other admin pages) */
+    .admin-console .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(31,35,40,0.4);
+      display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1.25rem;
+      z-index: 2000; opacity: 0; pointer-events: none; transition: opacity .12s ease;
     }
-    .stat-card {
-      padding: 1.5rem;
+    .admin-console .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+    .admin-console .gov-modal {
+      background: var(--surface); width: 100%; max-width: 740px;
+      max-height: 85vh; overflow-y: auto; border-radius: 4px;
+      border: 1px solid var(--line-dk);
     }
-    .stat-val {
-      font-size: 1.8rem;
-      font-weight: 800;
-      color: var(--primary-color);
-      margin: 0.5rem 0;
+    .admin-console .gov-modal-head {
+      display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;
+      padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--line); background:#fafbfb;
+      position: sticky; top: 0; z-index: 2;
     }
-    .grid-2col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+    .admin-console .gov-modal-head h3 { margin:0; font-size:1.02rem; }
+    .admin-console .gov-modal-body { padding: 1.1rem; }
+    .admin-console .gov-detail-grid {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:0.6rem; margin-bottom:1.1rem;
     }
-    @media (max-width: 992px) {
-      .stats-row {
-        grid-template-columns: 1fr 1fr;
-      }
+    .admin-console .gov-detail-cell {
+      border:1px solid var(--line); border-radius:4px; padding:0.6rem 0.75rem;
     }
-    @media (max-width: 768px) {
-      .stats-row {
-        grid-template-columns: 1fr;
-      }
-      .grid-2col {
-        grid-template-columns: 1fr;
-      }
+    .admin-console .gov-detail-cell .k { font-size:0.8rem; color:var(--muted); }
+    .admin-console .gov-detail-cell .v {
+      font-size:1rem; font-weight:600; margin-top:0.15rem; font-variant-numeric: tabular-nums;
     }
+    .admin-console .gov-subhead { font-size:0.85rem; color:var(--muted); margin:0 0 0.45rem; }
+    .admin-console .gov-inset {
+      border:1px solid var(--line); border-radius:4px; overflow:hidden; margin-bottom:1.1rem;
+    }
+    .admin-console .gov-inset .gov-table th,
+    .admin-console .gov-inset .gov-table td { padding:0.55rem 0.75rem; }
+    .admin-console .gov-searchbar {
+      padding:0.7rem 1.1rem; border-bottom:1px solid var(--line);
+      display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;
+    }
+    .admin-console .gov-searchbar input {
+      flex:1; min-width:200px; padding:0.45rem 0.6rem; font-family:inherit; font-size:0.86rem;
+      color:var(--ink); background:#fff; border:1px solid var(--line-dk); border-radius:4px;
+    }
+    .admin-console .gov-searchbar input:focus { outline:none; border-color:var(--role); }
+    .admin-console .gov-searchbar .count { font-size:0.8rem; color:var(--muted); white-space:nowrap; }
+    .admin-console tr.gov-row-click { cursor:pointer; }
   </style>
 </head>
-<body>
+<body class="admin-console role-state">
 
   <!-- Navbar -->
   <div id="navbar"></div>
 
-  <!-- Main Content -->
   <main>
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <!-- Masthead -->
+    <header class="gov-masthead">
       <div>
-        <h2 style="font-size: 2rem; color: var(--primary-dark);">State Administration Dashboard</h2>
-        <p style="color: var(--text-muted);">Monitoring Grain Procurement & Storage for state: <strong id="state-name-display">Madhya Pradesh</strong></p>
+        <h2 id="state-name-display">Madhya Pradesh</h2>
+        <div class="gov-sub">State procurement summary</div>
       </div>
-      <button class="btn btn-primary" id="export-report-btn">📥 Export State Report</button>
-    </div>
+      <button class="gov-btn ghost" id="export-report-btn">Download CSV</button>
+    </header>
 
-    <!-- Stats summary Row -->
-    <div class="stats-row">
-      <div class="card stat-card">
-        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Total Grain Procured</span>
-        <div class="stat-val" id="stat-total-procured">0 Qtl</div>
-        <span style="font-size: 0.8rem; color: var(--success-color);">Real-time count</span>
+    <!-- Ledger: key figures -->
+    <section class="gov-ledger">
+      <div class="gov-ledger-cell">
+        <div class="gov-ledger-label">Procured (Qtl)</div>
+        <div class="gov-ledger-val" id="stat-total-procured">0</div>
       </div>
-      <div class="card stat-card">
-        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Storage Utilization</span>
-        <div class="stat-val" id="stat-storage-util">0%</div>
-        <div style="width: 100%; height: 6px; background-color: #e2e8f0; border-radius: 3px; margin-top: 0.5rem; overflow: hidden;">
-          <div id="stat-storage-progress" style="width: 0%; height: 100%; background-color: var(--primary-color);"></div>
+      <div class="gov-ledger-cell">
+        <div class="gov-ledger-label">Storage used</div>
+        <div class="gov-ledger-val" id="stat-storage-util">0%</div>
+        <div class="gov-meter"><span id="stat-storage-progress" style="width:0%"></span></div>
+      </div>
+      <div class="gov-ledger-cell">
+        <div class="gov-ledger-label">Payments released</div>
+        <div class="gov-ledger-val" id="stat-payments-released">&#8377;0</div>
+        <div class="gov-ledger-note" id="stat-released-pct">0% done</div>
+      </div>
+      <div class="gov-ledger-cell">
+        <div class="gov-ledger-label">Payments pending</div>
+        <div class="gov-ledger-val" id="stat-payments-pending">&#8377;0</div>
+      </div>
+    </section>
+
+    <!-- Two-column: district operations + audit log -->
+    <div class="gov-grid">
+      <div class="gov-panel">
+        <div class="gov-panel-head">
+          <h3>Districts</h3>
+          <span class="gov-eyebrow">Click a district to see details</span>
         </div>
-      </div>
-      <div class="card stat-card">
-        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Total Payments Released</span>
-        <div class="stat-val" id="stat-payments-released">₹0</div>
-        <span style="font-size: 0.8rem; color: var(--success-color);" id="stat-released-pct">0% processed</span>
-      </div>
-      <div class="card stat-card">
-        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Pending Clearances</span>
-        <div class="stat-val" id="stat-payments-pending">₹0</div>
-        <span style="font-size: 0.8rem; color: var(--danger-color);">Needs verification</span>
-      </div>
-    </div>
-
-    <!-- Details Grid -->
-    <div class="grid-2col">
-      <!-- District Breakdown -->
-      <div class="card">
-        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">District Wise Operations</h3>
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+        <div class="gov-searchbar">
+          <input type="text" id="district-search" placeholder="Search district" autocomplete="off">
+          <span class="count" id="district-search-count"></span>
+        </div>
+        <div class="gov-panel-body flush">
+          <table class="gov-table">
             <thead>
-              <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
-                <th style="padding: 0.75rem 0.5rem;">District Name</th>
-                <th style="padding: 0.75rem 0.5rem;">Centres</th>
-                <th style="padding: 0.75rem 0.5rem;">Procured (Qtl)</th>
-                <th style="padding: 0.75rem 0.5rem;">Released Amt</th>
-                <th style="padding: 0.75rem 0.5rem;">Pending Amt</th>
+              <tr>
+                <th>District</th><th>Centres</th>
+                <th style="text-align:right;">Procured</th>
+                <th style="text-align:right;">Released</th>
+                <th style="text-align:right;">Pending</th>
               </tr>
             </thead>
-            <tbody id="district-rows">
-              <!-- Dynamically populated -->
-            </tbody>
+            <tbody id="district-rows"></tbody>
           </table>
         </div>
       </div>
 
-      <!-- Live Monitoring Notice & Top Performing Centres -->
-      <div class="card">
-        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">Active Alerts & Logs</h3>
-        
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-          <div style="border-left: 4px solid var(--warning-color); padding-left: 1rem;">
-            <strong style="font-size: 0.9rem; color: #b45309;">Storage Limit Warning</strong>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">Ujjain Central Mandi is at 92% capacity. Allocate backup warehouses.</p>
-          </div>
-
-          <div style="border-left: 4px solid var(--primary-light); padding-left: 1rem;">
-            <strong style="font-size: 0.9rem; color: var(--primary-color);">System Audit Log</strong>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">District administrator IND-D01 added a new procurement sub-centre: Depalpur.</p>
-          </div>
-
-          <div style="border-left: 4px solid var(--success-color); padding-left: 1rem;">
-            <strong style="font-size: 0.9rem; color: #047857;">Payment Reconciliation Done</strong>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">SBI direct-transfer settled 1,480 farmer payouts for Wheat procurement.</p>
+      <div class="gov-panel">
+        <div class="gov-panel-head"><h3>Recent activity</h3></div>
+        <div class="gov-panel-body">
+          <div class="gov-log">
+            <div class="gov-log-item">
+              <div class="k warn">Storage almost full</div>
+              <p>Ujjain Central Mandi is at 92% capacity. Arrange extra storage.</p>
+            </div>
+            <div class="gov-log-item">
+              <div class="k info">New centre</div>
+              <p>District office IND-D01 added a new centre: Depalpur.</p>
+            </div>
+            <div class="gov-log-item">
+              <div class="k ok">Payments settled</div>
+              <p>1,480 wheat payments were transferred to farmer bank accounts.</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- District Authorities list -->
-    <div class="card" style="margin-top: 2rem;">
-      <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">🏛️ District Authorities in <span id="da-state">your state</span></h3>
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+    <!-- District authorities register -->
+    <div class="gov-panel">
+      <div class="gov-panel-head">
+        <h3>District officers</h3>
+        <span class="gov-eyebrow" id="da-state">this state</span>
+      </div>
+      <div class="gov-searchbar">
+        <input type="text" id="authority-search" placeholder="Search district, login ID or name" autocomplete="off">
+        <span class="count" id="authority-search-count"></span>
+      </div>
+      <div class="gov-panel-body flush">
+        <table class="gov-table">
           <thead>
-            <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
-              <th style="padding: 0.75rem 0.5rem;">District</th>
-              <th style="padding: 0.75rem 0.5rem;">Authority Login ID</th>
-              <th style="padding: 0.75rem 0.5rem;">Name</th>
-              <th style="padding: 0.75rem 0.5rem;">Mobile</th>
-              <th style="padding: 0.75rem 0.5rem;">Centres</th>
-            </tr>
+            <tr><th>District</th><th>Login ID</th><th>Name</th><th>Mobile</th><th style="text-align:right;">Centres</th></tr>
           </thead>
           <tbody id="district-authorities-rows">
-            <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-muted);">Loading…</td></tr>
+            <tr><td colspan="5" class="empty">Loading&hellip;</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </main>
 
-  <!-- Footer -->
+  <!-- District detail dialog -->
+  <div class="modal-backdrop" id="district-detail-dialog">
+    <div class="gov-modal">
+      <div class="gov-modal-head">
+        <div>
+          <h3 id="dd-name">District</h3>
+          <p style="font-size:0.85rem; color:var(--muted); margin:0.2rem 0 0;" id="dd-sub">&mdash;</p>
+        </div>
+        <button type="button" onclick="closeDistrictDetail()" style="background:none;border:none;font-size:1.3rem;line-height:1;color:var(--muted);cursor:pointer;">&times;</button>
+      </div>
+      <div class="gov-modal-body" id="dd-body">
+        <p style="color:var(--muted); font-size:0.9rem;">Loading&hellip;</p>
+      </div>
+    </div>
+  </div>
+
   <div id="footer"></div>
 
   <script src="../common/common.js"></script>
   <script src="../common/navbar.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      const user = getAuthUser();
-      if (!user || user.role !== 'state') {
-        window.location.href = 'login.html';
+    // ===== STATE DASHBOARD =====
+    let authorityData = [];   // from /api/state/districts
+    let reportData = null;    // from /api/admin/reports/state
+    let districtStats = {};   // district name (lowercased) -> report row
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function inr(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+
+    // ---- District authorities table (searchable + clickable) ----
+    function renderAuthorities() {
+      const rows = document.getElementById('district-authorities-rows');
+      const countEl = document.getElementById('authority-search-count');
+      const q = (document.getElementById('authority-search').value || '').trim().toLowerCase();
+
+      const list = !q ? authorityData : authorityData.filter(d =>
+        (d.district || '').toLowerCase().includes(q) ||
+        (d.adminId || '').toLowerCase().includes(q) ||
+        (d.name || '').toLowerCase().includes(q) ||
+        (d.mobile || '').includes(q));
+
+      if (countEl) countEl.textContent = `${list.length} of ${authorityData.length}`;
+
+      if (list.length === 0) {
+        rows.innerHTML = `<tr><td colspan="5" class="empty">No match found.</td></tr>`;
         return;
       }
+      rows.innerHTML = list.map(d => {
+        const idCell = d.hasAuthority
+          ? `<span class="gov-id">${esc(d.adminId)}</span>`
+          : `<span class="gov-tag warn">Not assigned</span>`;
+        return `<tr class="gov-row-click" onclick="openDistrictDetail('${esc(d.district).replace(/'/g,'')}')">
+          <td style="font-weight:600;">${esc(d.district) || '&mdash;'}</td>
+          <td>${idCell}</td>
+          <td>${esc(d.name) || '&mdash;'}</td>
+          <td>${esc(d.mobile) || '&mdash;'}</td>
+          <td class="num">${d.centreCount}</td>
+        </tr>`;
+      }).join('');
+    }
 
-      document.getElementById('state-name-display').textContent = user.state || 'Madhya Pradesh';
+    // ---- Districts (procurement figures) table (searchable + clickable) ----
+    function renderDistrictRows() {
+      const tbody = document.getElementById('district-rows');
+      const countEl = document.getElementById('district-search-count');
+      const q = (document.getElementById('district-search').value || '').trim().toLowerCase();
+      const all = (reportData && reportData.districts) ? reportData.districts : [];
 
-      // Load district authorities (their login IDs) for this state
-      const daState = document.getElementById('da-state');
-      if (daState) daState.textContent = user.state || 'your state';
+      const list = !q ? all : all.filter(d => (d.name || '').toLowerCase().includes(q));
+      if (countEl) countEl.textContent = all.length ? `${list.length} of ${all.length}` : '';
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty">${
+          all.length === 0 ? 'No district records found.' : 'No match found.'
+        }</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = list.map(d => `
+        <tr class="gov-row-click" onclick="openDistrictDetail('${esc(d.name).replace(/'/g,'')}')">
+          <td style="font-weight:600;">${esc(d.name)}</td>
+          <td>${d.centresCount}</td>
+          <td class="num">${Number(d.procured || 0).toLocaleString()}</td>
+          <td class="num" style="color:var(--ok);">${inr(d.released)}</td>
+          <td class="num" style="color:var(--warn);">${inr(d.pending)}</td>
+        </tr>`).join('');
+    }
+
+    // ---- District detail dialog ----
+    const ddDialog = document.getElementById('district-detail-dialog');
+    function closeDistrictDetail() { ddDialog.classList.remove('open'); }
+    ddDialog.addEventListener('click', (e) => { if (e.target === ddDialog) closeDistrictDetail(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDistrictDetail(); });
+
+    async function openDistrictDetail(districtName) {
+      document.getElementById('dd-name').textContent = districtName;
+      document.getElementById('dd-sub').textContent = 'Loading…';
+      document.getElementById('dd-body').innerHTML =
+        `<p style="color:var(--muted); font-size:0.9rem;">Loading&hellip;</p>`;
+      ddDialog.classList.add('open');
+      try {
+        const d = await fetchAPI(`/api/state/districts/${encodeURIComponent(districtName)}`);
+        renderDistrictDetail(d);
+      } catch (err) {
+        document.getElementById('dd-sub').textContent = '';
+        document.getElementById('dd-body').innerHTML =
+          `<p style="color:var(--danger); font-size:0.9rem;">Could not load details for this district.</p>`;
+      }
+    }
+
+    function renderDistrictDetail(d) {
+      const t = d.totals || {};
+      document.getElementById('dd-name').textContent = d.district;
+      document.getElementById('dd-sub').textContent =
+        `${d.state} · ${t.centresCount || 0} centres, ${t.activeCentres || 0} open`;
+
+      const a = d.authority;
+      const authHtml = a
+        ? `<div class="gov-inset">
+             <table class="gov-table">
+               <tbody>
+                 <tr><td style="color:var(--muted); width:38%;">Login ID</td><td><span class="gov-id">${esc(a.adminId)}</span></td></tr>
+                 <tr><td style="color:var(--muted);">Name</td><td style="font-weight:600;">${esc(a.name)}</td></tr>
+                 <tr><td style="color:var(--muted);">Mobile</td><td>${esc(a.mobile) || '&mdash;'}</td></tr>
+                 <tr><td style="color:var(--muted);">Account</td><td><span class="gov-status ${a.active ? 'ok' : 'danger'}">${a.active ? 'Active' : 'Disabled'}</span></td></tr>
+               </tbody>
+             </table>
+           </div>`
+        : `<div class="gov-inset"><table class="gov-table"><tbody>
+             <tr><td class="empty">No officer assigned to ${esc(d.district)} yet.</td></tr>
+           </tbody></table></div>`;
+
+      const centresHtml = (d.centres && d.centres.length)
+        ? `<div class="gov-inset">
+             <table class="gov-table">
+               <thead><tr>
+                 <th>Centre</th><th>Operator</th><th>Status</th>
+                 <th style="text-align:right;">Capacity</th>
+                 <th style="text-align:right;">Procured</th>
+                 <th style="text-align:right;">Pending</th>
+               </tr></thead>
+               <tbody>
+                 ${d.centres.map(c => `<tr>
+                   <td style="font-weight:600;">${esc(c.name)}${c.centreId ? `<br><span class="gov-id">${esc(c.centreId)}</span>` : ''}</td>
+                   <td>${esc(c.operatorName)}${c.operatorMobile ? `<br><span style="font-size:0.78rem;color:var(--muted);">${esc(c.operatorMobile)}</span>` : ''}</td>
+                   <td><span class="gov-status ${c.status === 'closed' ? 'danger' : 'ok'}">${c.status === 'closed' ? 'Closed' : 'Open'}</span></td>
+                   <td class="num">${Number(c.storageCapacity).toLocaleString()}</td>
+                   <td class="num">${Number(c.procured).toLocaleString()} <span style="font-weight:400;color:var(--muted);">(${c.utilisation}%)</span></td>
+                   <td class="num" style="color:var(--warn);">${inr(c.pending)}</td>
+                 </tr>`).join('')}
+               </tbody>
+             </table>
+           </div>`
+        : `<div class="gov-inset"><table class="gov-table"><tbody>
+             <tr><td class="empty">No centres in this district yet.</td></tr>
+           </tbody></table></div>`;
+
+      document.getElementById('dd-body').innerHTML = `
+        <div class="gov-detail-grid">
+          <div class="gov-detail-cell"><div class="k">Procured (Qtl)</div><div class="v">${Number(t.procured || 0).toLocaleString()}</div></div>
+          <div class="gov-detail-cell"><div class="k">Storage used</div><div class="v">${t.utilisation || 0}%</div></div>
+          <div class="gov-detail-cell"><div class="k">Released</div><div class="v">${inr(t.released)}</div></div>
+          <div class="gov-detail-cell"><div class="k">Pending</div><div class="v">${inr(t.pending)}</div></div>
+          <div class="gov-detail-cell"><div class="k">Bookings</div><div class="v">${t.bookings || 0}</div></div>
+          <div class="gov-detail-cell"><div class="k">Farmers</div><div class="v">${t.farmersServed || 0}</div></div>
+        </div>
+        <p class="gov-subhead">District officer</p>
+        ${authHtml}
+        <p class="gov-subhead">Centres (${(d.centres || []).length})</p>
+        ${centresHtml}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = getAuthUser();
+      if (!user || user.role !== 'state') { window.location.href = 'login.html'; return; }
+
+      const stateName = user.state || 'Madhya Pradesh';
+      document.getElementById('state-name-display').textContent = stateName;
+      const inline = document.getElementById('state-name-inline');
+      if (inline) inline.textContent = stateName;
+
+      document.getElementById('district-search').addEventListener('input', renderDistrictRows);
+      document.getElementById('authority-search').addEventListener('input', renderAuthorities);
+
+      // ---- District authorities (login IDs) for this state ----
       fetchAPI('/api/state/districts').then(res => {
         const rows = document.getElementById('district-authorities-rows');
+        const daState = document.getElementById('da-state');
         if (!res.districts || res.districts.length === 0) {
-          rows.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-muted);">No districts found for ${res.state}.</td></tr>`;
+          rows.innerHTML = `<tr><td colspan="5" class="empty">No districts found for ${res.state}.</td></tr>`;
           return;
         }
-        // Header note: how many districts have an authority assigned
-        const daState = document.getElementById('da-state');
-        if (daState) daState.textContent = `${res.state} (${res.registeredAuthorities}/${res.totalDistricts} districts have an authority)`;
-
-        rows.innerHTML = res.districts.map(d => {
-          const idCell = d.hasAuthority
-            ? `<code>${d.adminId}</code>`
-            : `<span style="padding:0.15rem 0.5rem;border-radius:50px;font-size:0.75rem;background:rgba(244,162,97,0.15);color:var(--warning-color);font-weight:600;">Not assigned</span>`;
-          return `
-          <tr style="border-bottom:1px solid var(--border-color);">
-            <td style="padding:0.75rem 0.5rem; font-weight:600;">${d.district || '—'}</td>
-            <td style="padding:0.75rem 0.5rem;">${idCell}</td>
-            <td style="padding:0.75rem 0.5rem;">${d.name}</td>
-            <td style="padding:0.75rem 0.5rem;">${d.mobile || '—'}</td>
-            <td style="padding:0.75rem 0.5rem;">${d.centreCount}</td>
-          </tr>`;
-        }).join('');
-      }).catch(err => {
+        if (daState) daState.textContent = `${res.registeredAuthorities}/${res.totalDistricts} assigned`;
+        authorityData = res.districts;
+        renderAuthorities();
+      }).catch(() => {
         const rows = document.getElementById('district-authorities-rows');
-        if (rows) rows.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-muted);">Could not load districts.</td></tr>`;
+        if (rows) rows.innerHTML = `<tr><td colspan="5" class="empty">Could not load districts.</td></tr>`;
       });
 
-      let reportData = null;
-
+      // ---- State report figures ----
       try {
         const data = await fetchAPI('/api/admin/reports/state');
         reportData = data;
+        (data.districts || []).forEach(d => { districtStats[(d.name || '').toLowerCase()] = d; });
 
-        // Populate cards
-        document.getElementById('stat-total-procured').textContent = `${data.totalProcured.toLocaleString()} Qtl`;
-        
+        document.getElementById('stat-total-procured').textContent = `${data.totalProcured.toLocaleString()}`;
         const utilPct = data.totalStorage > 0 ? ((data.totalProcured / data.totalStorage) * 100).toFixed(1) : 0;
         document.getElementById('stat-storage-util').textContent = `${utilPct}%`;
         document.getElementById('stat-storage-progress').style.width = `${Math.min(utilPct, 100)}%`;
-
-        document.getElementById('stat-payments-released').textContent = `₹${data.totalReleased.toLocaleString('en-IN')}`;
-        document.getElementById('stat-payments-pending').textContent = `₹${data.totalPending.toLocaleString('en-IN')}`;
-
+        document.getElementById('stat-payments-released').textContent = inr(data.totalReleased);
+        document.getElementById('stat-payments-pending').textContent = inr(data.totalPending);
         const totalPay = data.totalReleased + data.totalPending;
         const processPct = totalPay > 0 ? ((data.totalReleased / totalPay) * 100).toFixed(1) : 0;
-        document.getElementById('stat-released-pct').textContent = `${processPct}% processed`;
+        document.getElementById('stat-released-pct').textContent = `${processPct}% done`;
 
-        // Populate district breakdown table
-        const tbody = document.getElementById('district-rows');
-        tbody.innerHTML = '';
-
-        if (!data.districts || data.districts.length === 0) {
-          tbody.innerHTML = `
-            <tr>
-              <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                No district records found.
-              </td>
-            </tr>
-          `;
-        } else {
-          data.districts.forEach(d => {
-            tbody.innerHTML += `
-              <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${d.name}</td>
-                <td style="padding: 0.75rem 0.5rem;">${d.centresCount} Centres</td>
-                <td style="padding: 0.75rem 0.5rem;">${d.procured.toLocaleString()} Qtl</td>
-                <td style="padding: 0.75rem 0.5rem; color: var(--success-color); font-weight: 600;">₹${d.released.toLocaleString('en-IN')}</td>
-                <td style="padding: 0.75rem 0.5rem; color: var(--warning-color); font-weight: 600;">₹${d.pending.toLocaleString('en-IN')}</td>
-              </tr>
-            `;
-          });
-        }
+        renderDistrictRows();
       } catch (err) {
         console.error('Failed to load state report:', err);
+        renderDistrictRows();
       }
 
-      // Handle CSV export
+      // ---- CSV export (unchanged logic) ----
       document.getElementById('export-report-btn').addEventListener('click', () => {
-        if (!reportData) {
-          showToast('No report data available to export', 'error');
-          return;
-        }
-
-        let csvContent = `State Procurement and Payment Report\r\n`;
-        csvContent += `State,${reportData.state}\r\n`;
-        csvContent += `Generated,${new Date().toLocaleDateString()}\r\n\r\n`;
-        csvContent += `Summary:\r\n`;
-        csvContent += `Total Centres,${reportData.centresCount}\r\n`;
-        csvContent += `Total Grain Procured (Qtl),${reportData.totalProcured}\r\n`;
-        csvContent += `Total Storage Capacity (Qtl),${reportData.totalStorage}\r\n`;
-        csvContent += `Total Payments Released (INR),${reportData.totalReleased}\r\n`;
-        csvContent += `Total Payments Pending (INR),${reportData.totalPending}\r\n\r\n`;
-        csvContent += `District Breakdown:\r\n`;
-        csvContent += `District Name,Centres Count,Total Procured (Qtl),Released Payments (INR),Pending Payments (INR)\r\n`;
-
+        if (!reportData) { showToast('No report data available to export', 'error'); return; }
+        let csv = `State Procurement and Payment Report\r\n`;
+        csv += `State,${reportData.state}\r\n`;
+        csv += `Generated,${new Date().toLocaleDateString()}\r\n\r\n`;
+        csv += `Summary:\r\n`;
+        csv += `Total Centres,${reportData.centresCount}\r\n`;
+        csv += `Total Grain Procured (Qtl),${reportData.totalProcured}\r\n`;
+        csv += `Total Storage Capacity (Qtl),${reportData.totalStorage}\r\n`;
+        csv += `Total Payments Released (INR),${reportData.totalReleased}\r\n`;
+        csv += `Total Payments Pending (INR),${reportData.totalPending}\r\n\r\n`;
+        csv += `District Breakdown:\r\n`;
+        csv += `District Name,Centres Count,Total Procured (Qtl),Released Payments (INR),Pending Payments (INR)\r\n`;
         reportData.districts.forEach(d => {
-          csvContent += `"${d.name}",${d.centresCount},${d.procured},${d.released},${d.pending}\r\n`;
+          csv += `"${d.name}",${d.centresCount},${d.procured},${d.released},${d.pending}\r\n`;
         });
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `state_report_${reportData.state.replace(/\s+/g, '_')}.csv`);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `state_report_${reportData.state.replace(/\s+/g, '_')}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        showToast('CSV report downloaded successfully', 'success');
+        showToast('CSV report downloaded', 'success');
       });
     });
   </script>

@@ -3,138 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Centre Operator Dashboard - Farmer Procurement Hub</title>
+  <title>Centre Operator - Farmer Procurement Hub</title>
   <link rel="stylesheet" href="../common/style.css">
   <link rel="stylesheet" href="admin.css">
   <style>
-    .operator-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 2rem;
+    .admin-console .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(31,35,40,0.4);
+      display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1.25rem;
+      z-index: 2000; opacity: 0; pointer-events: none; transition: opacity .12s ease;
     }
-    .status-pill {
-      padding: 0.25rem 0.5rem;
-      border-radius: 50px;
-      font-size: 0.8rem;
-      font-weight: 600;
+    .admin-console .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+    .admin-console .gov-modal {
+      background: var(--surface); width: 100%; max-width: 480px;
+      max-height: 85vh; overflow-y: auto;
+      border: 1px solid var(--line-dk); border-radius: 4px;
     }
-    .pill-booked { background-color: rgba(244, 162, 97, 0.15); color: var(--warning-color); }
-    .pill-arrived { background-color: rgba(42, 157, 143, 0.15); color: var(--success-color); }
-    .pill-processing { background-color: rgba(27, 77, 62, 0.15); color: var(--primary-light); }
-    .pill-completed { background-color: rgba(15, 23, 42, 0.15); color: var(--text-main); }
-    .pill-absent { background-color: rgba(230, 57, 70, 0.15); color: var(--danger-color); }
-
-    /* Weighing Panel Modal Mock style */
-    .modal-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--transition-fast);
+    .admin-console .gov-modal-head {
+      display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;
+      padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--line); background:#fafbfb;
     }
-    .modal-backdrop.open {
-      opacity: 1;
-      pointer-events: auto;
+    .admin-console .gov-modal-head h3 { margin:0; font-size:1.02rem; }
+    .admin-console .gov-modal-body { padding: 1.1rem; }
+    .admin-console .gov-summary {
+      border:1px solid var(--line); border-radius:4px; padding:0.4rem 0.85rem; margin-bottom:1rem;
     }
-    .weighing-modal {
-      background: white;
-      width: 100%;
-      max-width: 500px;
-      border-radius: var(--radius-md);
-      padding: 2rem;
-      box-shadow: var(--shadow-lg);
-      transform: translateY(-20px);
-      transition: transform var(--transition-normal);
+    .admin-console .gov-summary .row {
+      display:flex; justify-content:space-between; padding:0.35rem 0; font-size:0.88rem;
+      border-bottom:1px solid var(--line);
     }
-    .modal-backdrop.open .weighing-modal {
-      transform: translateY(0);
-    }
+    .admin-console .gov-summary .row:last-child { border-bottom:none; }
+    .admin-console .gov-summary .row span { color:var(--muted); }
+    .admin-console .queue-actions { display:flex; gap:0.4rem; justify-content:flex-end; flex-wrap:wrap; }
   </style>
 </head>
-<body>
+<body class="admin-console role-centre">
 
   <!-- Navbar -->
   <div id="navbar"></div>
 
-  <!-- Main Content -->
   <main>
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <!-- Masthead -->
+    <header class="gov-masthead">
       <div>
-        <h2 style="font-size: 2rem; color: var(--primary-dark);" id="centre-title">Centre Operator Dashboard</h2>
-        <p style="color: var(--text-muted);">Operator Code: <strong id="operator-code-display">OP-UJN-02</strong> | Status: 🟢 Open</p>
+        <h2 id="centre-title">Centre Operator</h2>
+        <div class="gov-sub">Operator <strong id="operator-code-display">OP-UJN-02</strong> · <span class="gov-status ok">Open</span></div>
       </div>
+    </header>
 
-      <!-- Capacity Info Header -->
-      <div style="display: flex; gap: 1.5rem;">
-        <div class="card" style="padding: 0.5rem 1rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);">
-          <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: 600;">Today's Storage Load</span>
-          <strong style="color: var(--primary-color);" id="today-storage-load">0 / 0 Qtl (0%)</strong>
-        </div>
+    <!-- Ledger -->
+    <section class="gov-ledger">
+      <div class="gov-ledger-cell">
+        <div class="gov-ledger-label">Procured today</div>
+        <div class="gov-ledger-val" id="today-storage-load">0 / 0 Qtl (0%)</div>
       </div>
-    </div>
+    </section>
 
-    <!-- Token Search + All Bookings -->
-    <div class="card" style="margin-bottom: 2rem;">
-      <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <span>🔎 Search &amp; All Bookings at this Centre</span>
-        <button class="btn btn-outline" style="padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="loadAllBookings()">🔄 Refresh</button>
-      </h3>
-
-      <form id="token-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
-        <input type="text" id="token-search-input" class="form-control" style="flex: 1; min-width: 220px;" placeholder="Enter token number, e.g. T-1001">
-        <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">Search Token</button>
-        <button type="button" class="btn btn-outline" style="padding: 0.5rem 1.25rem;" onclick="document.getElementById('token-search-input').value='';loadAllBookings();">Clear</button>
-      </form>
-
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+    <!-- Search + All Bookings -->
+    <div class="gov-panel">
+      <div class="gov-panel-head">
+        <h3>All bookings</h3>
+        <button class="gov-btn ghost sm" onclick="loadAllBookings()">Refresh</button>
+      </div>
+      <div class="gov-panel-body">
+        <form id="token-search-form" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <input type="text" id="token-search-input" style="flex:1; min-width:200px; padding:0.45rem 0.6rem; font-family:inherit; font-size:0.86rem; border:1px solid var(--line-dk); border-radius:4px;" placeholder="Token number, e.g. T-1001">
+          <button type="submit" class="gov-btn">Search</button>
+          <button type="button" class="gov-btn ghost" onclick="document.getElementById('token-search-input').value='';loadAllBookings();">Clear</button>
+        </form>
+      </div>
+      <div class="gov-panel-body flush">
+        <table class="gov-table">
           <thead>
-            <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
-              <th style="padding: 0.85rem 0.5rem;">Token</th>
-              <th style="padding: 0.85rem 0.5rem;">Farmer</th>
-              <th style="padding: 0.85rem 0.5rem;">Crop (Booked)</th>
-              <th style="padding: 0.85rem 0.5rem;">Date / Slot</th>
-              <th style="padding: 0.85rem 0.5rem;">Status</th>
-              <th style="padding: 0.85rem 0.5rem; text-align: center;">Action</th>
+            <tr>
+              <th>Token</th><th>Farmer</th><th>Crop</th>
+              <th>Date / Slot</th><th>Status</th>
+              <th style="text-align:right;">Action</th>
             </tr>
           </thead>
           <tbody id="all-bookings-rows">
-            <tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Loading bookings…</td></tr>
+            <tr><td colspan="6" class="empty">Loading bookings&hellip;</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Active Bookings & Queue Management -->
-    <div class="card">
-      <h3 style="color: var(--primary-dark); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-        <span id="queue-date-subtitle">📅 Today's Live Queue Bookings</span>
-        <button class="btn btn-outline" style="padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="renderQueue()">🔄 Refresh Queue</button>
-      </h3>
-
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+    <!-- Live Queue -->
+    <div class="gov-panel">
+      <div class="gov-panel-head">
+        <h3 id="queue-date-subtitle">Today's queue</h3>
+        <button class="gov-btn ghost sm" onclick="renderQueue()">Refresh</button>
+      </div>
+      <div class="gov-panel-body flush">
+        <table class="gov-table">
           <thead>
-            <tr style="border-bottom: 2px solid var(--border-color); color: var(--primary-dark); font-weight: bold;">
-              <th style="padding: 1rem 0.5rem;">Token</th>
-              <th style="padding: 1rem 0.5rem;">Farmer Details</th>
-              <th style="padding: 1rem 0.5rem;">Crop (Booked Qty)</th>
-              <th style="padding: 1rem 0.5rem;">Scheduled Slot</th>
-              <th style="padding: 1rem 0.5rem;">Status</th>
-              <th style="padding: 1rem 0.5rem; text-align: center;">Actions</th>
+            <tr>
+              <th>Token</th><th>Farmer</th><th>Crop</th>
+              <th>Slot</th><th>Status</th>
+              <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
-          <tbody id="queue-rows">
-            <!-- Dynamically populated from API -->
-          </tbody>
+          <tbody id="queue-rows"></tbody>
         </table>
       </div>
     </div>
@@ -142,79 +110,73 @@
 
   <!-- Weighing & Quality Form Dialog -->
   <div class="modal-backdrop" id="weighing-dialog">
-    <div class="weighing-modal">
-      <h3 style="color: var(--primary-dark); margin-bottom: 0.5rem;">⚖️ Record Procurement Weight</h3>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;" id="modal-subheading">
-        Token: T-1001 | Farmer: Harish Prasad
-      </p>
+    <div class="gov-modal">
+      <div class="gov-modal-head">
+        <div>
+          <h3>Record weight</h3>
+          <p style="font-size:0.85rem; color:var(--muted); margin:0.2rem 0 0;" id="modal-subheading">Token: T-1001 | Farmer: Harish Prasad</p>
+        </div>
+        <button type="button" class="gov-modal-close" onclick="closeModal()" style="background:none;border:none;font-size:1.3rem;color:var(--muted);cursor:pointer;">&times;</button>
+      </div>
+      <div class="gov-modal-body">
+        <!-- STEP 1: enter weights -->
+        <form id="weighing-form">
+          <input type="hidden" id="modal-token">
+          <div class="gov-field">
+            <label>Booked quantity (Qtl)</label>
+            <input type="text" id="expected-qty" disabled style="font-weight:600;">
+          </div>
+          <div class="gov-field">
+            <label for="actual-qty">Weighed quantity (Qtl)</label>
+            <input type="number" id="actual-qty" step="0.1" placeholder="e.g. 18.9" required>
+          </div>
+          <div class="gov-field">
+            <label for="accepted-qty">Accepted quantity (Qtl)</label>
+            <input type="number" id="accepted-qty" step="0.1" placeholder="e.g. 18.5" required>
+            <span style="font-size:0.78rem; color:var(--muted);">Payment is based on the accepted quantity.</span>
+          </div>
+          <div class="gov-field">
+            <label for="rejected-qty">Rejected quantity (Qtl)</label>
+            <input type="number" id="rejected-qty" step="0.1" value="0" readonly>
+          </div>
+          <div class="gov-field" id="rejection-reason-group" style="display:none;">
+            <label for="rejection-reason">Reason</label>
+            <input type="text" id="rejection-reason" placeholder="e.g. high moisture, dust">
+          </div>
+          <div style="display:flex; gap:0.6rem; margin-top:1.25rem;">
+            <button type="button" class="gov-btn ghost" style="flex:1;" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="gov-btn" style="flex:1;">Send OTP</button>
+          </div>
+        </form>
 
-      <!-- STEP 1: enter weights -->
-      <form id="weighing-form">
-        <input type="hidden" id="modal-token">
-
-        <div class="form-group">
-          <label class="form-label">Booked Quantity (Quintals)</label>
-          <input type="text" id="expected-qty" class="form-control" disabled style="background-color: #f1f5f9; font-weight: bold;">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="actual-qty">Actual Weighed Quantity (Quintals)</label>
-          <input type="number" id="actual-qty" class="form-control" step="0.1" placeholder="e.g. 18.9" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="accepted-qty">Accepted Quantity (Quintals)</label>
-          <input type="number" id="accepted-qty" class="form-control" step="0.1" placeholder="e.g. 18.5" required>
-          <span style="font-size: 0.75rem; color: var(--text-muted);">Payouts are calculated based on accepted weight.</span>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="rejected-qty">Rejected Quantity (Quintals)</label>
-          <input type="number" id="rejected-qty" class="form-control" step="0.1" value="0" readonly style="background-color: #f1f5f9;">
-        </div>
-
-        <div class="form-group" id="rejection-reason-group" style="display: none;">
-          <label class="form-label" for="rejection-reason">Reason for Quantity Correction/Rejection</label>
-          <input type="text" id="rejection-reason" class="form-control" placeholder="e.g. High moisture content, dust mixing">
-        </div>
-
-        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-          <button type="button" class="btn btn-outline" style="flex: 1;" onclick="closeModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary" style="flex: 1;">📩 Send OTP to Farmer</button>
-        </div>
-      </form>
-
-      <!-- STEP 2: farmer OTP confirmation -->
-      <form id="otp-form" style="display: none;">
-        <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
-          <div style="display:flex; justify-content:space-between; padding:0.3rem 0;"><span style="color:var(--text-muted);">Booked</span><strong id="sum-booked">—</strong></div>
-          <div style="display:flex; justify-content:space-between; padding:0.3rem 0;"><span style="color:var(--text-muted);">Actual weighed</span><strong id="sum-actual">—</strong></div>
-          <div style="display:flex; justify-content:space-between; padding:0.3rem 0;"><span style="color:var(--text-muted);">Accepted</span><strong id="sum-accepted" style="color:var(--success-color);">—</strong></div>
-          <div style="display:flex; justify-content:space-between; padding:0.3rem 0;"><span style="color:var(--text-muted);">Rejected</span><strong id="sum-rejected" style="color:var(--danger-color);">—</strong></div>
-        </div>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;" id="otp-hint">
-          An OTP has been sent to the farmer's mobile. Ask the farmer to share it to confirm.
-        </p>
-        <div class="form-group">
-          <label class="form-label" for="farmer-otp">Farmer OTP</label>
-          <input type="text" id="farmer-otp" class="form-control" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" required>
-        </div>
-        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-          <button type="button" class="btn btn-outline" style="flex: 1;" onclick="backToWeighing()">← Back</button>
-          <button type="submit" class="btn btn-primary" style="flex: 1; background-color: var(--success-color); border-color: var(--success-color);">✅ Confirm Procurement</button>
-        </div>
-      </form>
+        <!-- STEP 2: farmer OTP confirmation -->
+        <form id="otp-form" style="display:none;">
+          <div class="gov-summary">
+            <div class="row"><span>Booked</span><strong id="sum-booked">&mdash;</strong></div>
+            <div class="row"><span>Weighed</span><strong id="sum-actual">&mdash;</strong></div>
+            <div class="row"><span>Accepted</span><strong id="sum-accepted">&mdash;</strong></div>
+            <div class="row"><span>Rejected</span><strong id="sum-rejected">&mdash;</strong></div>
+          </div>
+          <p style="font-size:0.85rem; color:var(--muted); margin-bottom:0.9rem;" id="otp-hint">An OTP has been sent to the farmer's mobile. Ask the farmer for it.</p>
+          <div class="gov-field">
+            <label for="farmer-otp">Farmer OTP</label>
+            <input type="text" id="farmer-otp" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" required>
+          </div>
+          <div style="display:flex; gap:0.6rem; margin-top:1.25rem;">
+            <button type="button" class="gov-btn ghost" style="flex:1;" onclick="backToWeighing()">Back</button>
+            <button type="submit" class="gov-btn" style="flex:1;">Confirm</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
-  <!-- Footer -->
   <div id="footer"></div>
 
   <script src="../common/common.js"></script>
   <script src="../common/navbar.js"></script>
   <script>
-    // ===== PHASE 5 & 6: CENTRE OPERATOR DASHBOARD FUNCTIONALITY =====
-
+    // ===== CENTRE OPERATOR DASHBOARD =====
     const modal = document.getElementById('weighing-dialog');
     const actualInput = document.getElementById('actual-qty');
     const acceptedInput = document.getElementById('accepted-qty');
@@ -223,7 +185,18 @@
     const reasonInput = document.getElementById('rejection-reason');
     const queueTable = document.getElementById('queue-rows');
 
-    // Auto-calculate rejected quantity
+    // status -> gov-status dot modifier
+    function govStatusClass(status) {
+      if (status === 'Arrived') return 'ok';
+      if (status === 'Processing') return 'warn';
+      if (status === 'Completed') return 'idle';
+      if (status === 'Absent') return 'danger';
+      return 'warn'; // Booked
+    }
+    function statusPillHtml(status) {
+      return `<span class="gov-status ${govStatusClass(status)}">${status}</span>`;
+    }
+
     actualInput.addEventListener('input', updateRejected);
     acceptedInput.addEventListener('input', updateRejected);
 
@@ -231,9 +204,7 @@
       const act = parseFloat(actualInput.value) || 0;
       const acc = parseFloat(acceptedInput.value) || 0;
       const rej = act - acc;
-
       rejectedInput.value = rej >= 0 ? rej.toFixed(1) : 0;
-
       if (rej > 0 || act !== parseFloat(document.getElementById('expected-qty').value)) {
         reasonGroup.style.display = 'block';
         reasonInput.setAttribute('required', 'required');
@@ -243,79 +214,50 @@
       }
     }
 
-    // Fetch queue from API and render table
     async function renderQueue() {
       try {
         const user = getAuthUser();
-        if (!user || user.role !== 'centre') {
-          window.location.href = 'login.html';
-          return;
-        }
-
+        if (!user || user.role !== 'centre') { window.location.href = 'login.html'; return; }
         document.getElementById('operator-code-display').textContent = user.adminId || 'N/A';
 
         const data = await fetchAPI('/api/centre/queue');
-        
-        // Update headers
-        document.getElementById('centre-title').textContent = `${data.centre.name} Operator Dashboard`;
+        document.getElementById('centre-title').textContent = `${data.centre.name} · Operator`;
 
-        // Calculate today's procured loads
         let completedQty = 0;
-        data.queue.forEach(item => {
-          if (item.status === 'Completed') {
-            completedQty += item.quantity;
-          }
-        });
+        data.queue.forEach(item => { if (item.status === 'Completed') completedQty += item.quantity; });
         const utilPct = data.centre.storageCapacity > 0 ? ((completedQty / data.centre.storageCapacity) * 100).toFixed(1) : 0;
         document.getElementById('today-storage-load').textContent = `${completedQty.toLocaleString()} / ${data.centre.storageCapacity.toLocaleString()} Qtl (${utilPct}%)`;
 
         const todayDateStr = new Date(data.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-        document.getElementById('queue-date-subtitle').textContent = `📅 Today's Live Queue Bookings (${todayDateStr})`;
+        document.getElementById('queue-date-subtitle').textContent = `Today's queue — ${todayDateStr}`;
 
         if (!data.queue || data.queue.length === 0) {
-          queueTable.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">No active bookings for today</td></tr>`;
+          queueTable.innerHTML = `<tr><td colspan="6" class="empty">No bookings for today</td></tr>`;
           return;
         }
 
         queueTable.innerHTML = data.queue.map(b => {
-          let pillClass = 'pill-booked';
-          if (b.status === 'Arrived') pillClass = 'pill-arrived';
-          if (b.status === 'Processing') pillClass = 'pill-processing';
-          if (b.status === 'Completed') pillClass = 'pill-completed';
-          if (b.status === 'Absent') pillClass = 'pill-absent';
-
           let actionsHtml = '';
           if (b.status === 'Booked') {
             actionsHtml = `
-              <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-color: var(--success-color); color: var(--success-color);" onclick="updateBookingStatus('${b.id}', 'Arrived')">Check-In</button>
-              <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-color: var(--danger-color); color: var(--danger-color);" onclick="updateBookingStatus('${b.id}', 'Absent')">Absent</button>
-            `;
+              <button class="gov-btn ghost sm" onclick="updateBookingStatus('${b.id}', 'Arrived')">Check in</button>
+              <button class="gov-btn danger sm" onclick="updateBookingStatus('${b.id}', 'Absent')">Absent</button>`;
           } else if (b.status === 'Arrived') {
-            actionsHtml = `
-              <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="updateBookingStatus('${b.id}', 'Processing')">Start Processing</button>
-            `;
+            actionsHtml = `<button class="gov-btn sm" onclick="updateBookingStatus('${b.id}', 'Processing')">Start</button>`;
           } else if (b.status === 'Processing') {
-            actionsHtml = `
-              <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background-color: var(--success-color); border-color: var(--success-color);" onclick="openWeighingModal('${b.id}', '${b.tokenNumber}', '${b.farmerName}', '${b.cropType}', ${b.quantity})">Weigh & Procure</button>
-            `;
+            actionsHtml = `<button class="gov-btn sm" onclick="openWeighingModal('${b.id}', '${b.tokenNumber}', '${b.farmerName}', '${b.cropType}', ${b.quantity})">Weigh</button>`;
           } else {
-            actionsHtml = `<span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Completed</span>`;
+            actionsHtml = `<span style="font-size:0.85rem; color:var(--muted);">Completed</span>`;
           }
-
           return `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-              <td style="padding: 1rem 0.5rem; font-weight: 700;">${b.tokenNumber}</td>
-              <td style="padding: 1rem 0.5rem; font-weight: 600;">${b.farmerName}<br><span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">Mobile: ${b.farmerMobile} | Khasra: ${b.landKhasra}</span></td>
-              <td style="padding: 1rem 0.5rem;">${b.cropType.toUpperCase()} (${b.quantity} Qtl)</td>
-              <td style="padding: 1rem 0.5rem;">${b.timeWindow}</td>
-              <td style="padding: 1rem 0.5rem;">
-                <span class="status-pill ${pillClass}">${b.status}</span>
-              </td>
-              <td style="padding: 1rem 0.5rem; text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
-                ${actionsHtml}
-              </td>
-            </tr>
-          `;
+            <tr>
+              <td><span class="gov-id">${b.tokenNumber}</span></td>
+              <td style="font-weight:600;">${b.farmerName}<br><span style="font-size:0.78rem; color:var(--muted); font-weight:normal;">${b.farmerMobile} · Khasra ${b.landKhasra}</span></td>
+              <td>${b.cropType.toUpperCase()} (${b.quantity} Qtl)</td>
+              <td>${b.timeWindow}</td>
+              <td>${statusPillHtml(b.status)}</td>
+              <td><div class="queue-actions">${actionsHtml}</div></td>
+            </tr>`;
         }).join('');
       } catch (err) {
         console.error('Queue render error:', err);
@@ -324,43 +266,27 @@
     }
 
     function updateBookingStatus(id, status) {
-      fetchAPI(`/api/centre/bookings/${id}`, {
-        method: 'PATCH',
-        body: { status }
-      })
-      .then(data => {
-        showToast(`Booking status updated to ${status}`, 'success');
-        renderQueue();
-      })
-      .catch(err => {
-        // Handled in fetchAPI
-      });
+      fetchAPI(`/api/centre/bookings/${id}`, { method: 'PATCH', body: { status } })
+        .then(() => { showToast(`Status changed to ${status}`, 'success'); renderQueue(); })
+        .catch(err => {});
     }
 
-    // Open weighing modal
     function openWeighingModal(bookingId, token, farmerName, cropType, quantity) {
       document.getElementById('modal-token').value = bookingId;
       document.getElementById('modal-subheading').textContent = `Token: ${token} | Farmer: ${farmerName} | Crop: ${cropType.toUpperCase()}`;
       document.getElementById('expected-qty').value = quantity;
-
       actualInput.value = quantity;
       acceptedInput.value = quantity;
       rejectedInput.value = 0;
       reasonGroup.style.display = 'none';
       reasonInput.value = '';
       reasonInput.removeAttribute('required');
-
       resetModalSteps();
       modal.classList.add('open');
     }
 
-    // Close modal
-    function closeModal() {
-      modal.classList.remove('open');
-      resetModalSteps();
-    }
+    function closeModal() { modal.classList.remove('open'); resetModalSteps(); }
 
-    // Reset both steps back to weighing view
     function resetModalSteps() {
       document.getElementById('weighing-form').style.display = 'block';
       document.getElementById('otp-form').style.display = 'none';
@@ -372,7 +298,7 @@
       document.getElementById('otp-form').style.display = 'none';
     }
 
-    // STEP 1: operator confirms weights -> send OTP to farmer
+    // STEP 1: send OTP to farmer
     document.getElementById('weighing-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const bookingId = document.getElementById('modal-token').value;
@@ -380,45 +306,28 @@
       const actual = parseFloat(actualInput.value);
       const accepted = parseFloat(acceptedInput.value);
       const rejected = Math.max(actual - accepted, 0);
-
-      if (isNaN(actual) || isNaN(accepted)) {
-        showToast('Enter actual and accepted quantity', 'error');
-        return;
-      }
-      if (accepted > actual + 0.001) {
-        showToast('Accepted cannot exceed actual weight', 'error');
-        return;
-      }
-
+      if (isNaN(actual) || isNaN(accepted)) { showToast('Enter actual and accepted quantity', 'error'); return; }
+      if (accepted > actual + 0.001) { showToast('Accepted cannot exceed actual weight', 'error'); return; }
       try {
-        const res = await fetchAPI('/api/centre/procurement/start-otp', {
-          method: 'POST',
-          body: { bookingId }
-        });
-
-        // Fill summary
+        const res = await fetchAPI('/api/centre/procurement/start-otp', { method: 'POST', body: { bookingId } });
         document.getElementById('sum-booked').textContent = `${booked} Qtl`;
         document.getElementById('sum-actual').textContent = `${actual} Qtl`;
         document.getElementById('sum-accepted').textContent = `${accepted} Qtl`;
         document.getElementById('sum-rejected').textContent = `${rejected.toFixed(1)} Qtl`;
         const hint = document.getElementById('otp-hint');
         if (res && res.demo && res.code) {
-          hint.innerHTML = `OTP sent to farmer's mobile <strong>${res.farmerMobile || ''}</strong>. <em>(Demo OTP: ${res.code})</em>`;
+          hint.innerHTML = `OTP sent to <strong>${res.farmerMobile || ''}</strong>. Demo OTP: ${res.code}`;
         } else {
-          hint.textContent = `An OTP has been sent to the farmer's mobile. Ask the farmer to share it to confirm.`;
+          hint.textContent = `An OTP has been sent to the farmer's mobile. Ask the farmer for it.`;
         }
-
-        // Switch to OTP step
         document.getElementById('weighing-form').style.display = 'none';
         document.getElementById('otp-form').style.display = 'block';
         document.getElementById('farmer-otp').focus();
         showToast('OTP sent to farmer', 'success');
-      } catch (err) {
-        // handled in fetchAPI
-      }
+      } catch (err) {}
     });
 
-    // STEP 2: farmer OTP -> confirm & complete procurement
+    // STEP 2: confirm & complete
     document.getElementById('otp-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const bookingId = document.getElementById('modal-token').value;
@@ -427,65 +336,46 @@
       const accepted = parseFloat(acceptedInput.value);
       const rejected = Math.max(actual - accepted, 0);
       const reason = reasonInput.value;
-
       try {
         const res = await fetchAPI('/api/centre/procurement/confirm', {
           method: 'POST',
-          body: {
-            bookingId,
-            otp,
-            actualWeight: actual,
-            acceptedQuantity: accepted,
-            rejectedQuantity: rejected,
-            rejectionReason: reason
-          }
+          body: { bookingId, otp, actualWeight: actual, acceptedQuantity: accepted, rejectedQuantity: rejected, rejectionReason: reason }
         });
         const s = res.summary || {};
-        showToast(`✅ Procurement complete! ₹${(s.amount || 0).toLocaleString('en-IN')} payout for ${s.acceptedQuantity} Qtl`, 'success');
+        showToast(`Done. ₹${(s.amount || 0).toLocaleString('en-IN')} for ${s.acceptedQuantity} Qtl`, 'success');
         closeModal();
         renderQueue();
         loadAllBookings();
-      } catch (err) {
-        // handled in fetchAPI
-      }
+      } catch (err) {}
     });
 
     // ===== ALL BOOKINGS + TOKEN SEARCH =====
-    function statusPillHtml(status) {
-      let cls = 'pill-booked';
-      if (status === 'Arrived') cls = 'pill-arrived';
-      if (status === 'Processing') cls = 'pill-processing';
-      if (status === 'Completed') cls = 'pill-completed';
-      if (status === 'Absent') cls = 'pill-absent';
-      return `<span class="status-pill ${cls}">${status}</span>`;
-    }
-
     async function loadAllBookings(token) {
       const tbody = document.getElementById('all-bookings-rows');
       try {
         const qs = token ? `?token=${encodeURIComponent(token)}` : '';
         const data = await fetchAPI(`/api/centre/bookings${qs}`);
         if (!data.bookings || data.bookings.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-muted);">${token ? 'No booking found for token ' + token : 'No bookings yet at this centre'}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" class="empty">${token ? 'No booking found for ' + token : 'No bookings yet'}</td></tr>`;
           return;
         }
         tbody.innerHTML = data.bookings.map(b => {
           const canProcure = b.status !== 'Completed' && b.status !== 'Absent';
           const action = canProcure
-            ? `<button class="btn btn-primary" style="padding:0.3rem 0.7rem;font-size:0.8rem;background-color:var(--success-color);border-color:var(--success-color);" onclick="openWeighingModal('${b.id}','${b.tokenNumber}','${(b.farmerName||'').replace(/'/g,"")}','${b.cropType}',${b.quantity})">Weigh &amp; Procure</button>`
-            : `<span style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">${b.status}</span>`;
+            ? `<button class="gov-btn sm" onclick="openWeighingModal('${b.id}','${b.tokenNumber}','${(b.farmerName||'').replace(/'/g,"")}','${b.cropType}',${b.quantity})">Weigh</button>`
+            : `<span style="font-size:0.85rem;color:var(--muted);">${b.status}</span>`;
           return `
-            <tr style="border-bottom:1px solid var(--border-color);">
-              <td style="padding:0.85rem 0.5rem;font-weight:700;">${b.tokenNumber}</td>
-              <td style="padding:0.85rem 0.5rem;">${b.farmerName}<br><span style="font-size:0.72rem;color:var(--text-muted);">${b.farmerMobile || ''} | Khasra: ${b.landKhasra}</span></td>
-              <td style="padding:0.85rem 0.5rem;">${(b.cropType||'').toUpperCase()} (${b.quantity} Qtl)</td>
-              <td style="padding:0.85rem 0.5rem;">${b.date}<br><span style="font-size:0.72rem;color:var(--text-muted);">${b.timeWindow || ''}</span></td>
-              <td style="padding:0.85rem 0.5rem;">${statusPillHtml(b.status)}</td>
-              <td style="padding:0.85rem 0.5rem;text-align:center;">${action}</td>
+            <tr>
+              <td><span class="gov-id">${b.tokenNumber}</span></td>
+              <td>${b.farmerName}<br><span style="font-size:0.78rem;color:var(--muted);">${b.farmerMobile || ''} · Khasra ${b.landKhasra}</span></td>
+              <td>${(b.cropType||'').toUpperCase()} (${b.quantity} Qtl)</td>
+              <td>${b.date}<br><span style="font-size:0.72rem;color:var(--muted);">${b.timeWindow || ''}</span></td>
+              <td>${statusPillHtml(b.status)}</td>
+              <td style="text-align:right;">${action}</td>
             </tr>`;
         }).join('');
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--danger-color);">Failed to load bookings</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="empty" style="color:var(--danger);">Failed to load bookings</td></tr>`;
       }
     }
 
@@ -495,7 +385,6 @@
       loadAllBookings(t || undefined);
     });
 
-    // Initialize when page loads
     document.addEventListener('DOMContentLoaded', () => {
       renderQueue();
       loadAllBookings();

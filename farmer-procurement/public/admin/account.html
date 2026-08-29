@@ -7,58 +7,64 @@
   <link rel="stylesheet" href="../common/style.css">
   <link rel="stylesheet" href="admin.css">
   <style>
-    .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     @media (max-width: 768px) { .account-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
-<body>
+<body class="admin-console">
   <div id="navbar"></div>
 
   <main>
-    <div style="margin-bottom: 2rem;">
-      <h2 style="font-size: 2rem; color: var(--primary-dark);">⚙️ Account Settings</h2>
-      <p style="color: var(--text-muted);">Logged in as <strong id="acct-id">—</strong> (<span id="acct-role">—</span>)</p>
-    </div>
+    <header class="gov-masthead">
+      <div>
+        <h2>Account</h2>
+        <div class="gov-sub">Signed in as <strong id="acct-id">—</strong> (<span id="acct-role">—</span>)</div>
+      </div>
+    </header>
 
     <div class="account-grid">
       <!-- Change Password -->
-      <div class="card">
-        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">🔑 Change Password</h3>
-        <form id="change-password-form">
-          <div class="form-group">
-            <label class="form-label" for="current-password">Current Password</label>
-            <input type="password" id="current-password" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="new-password">New Password</label>
-            <input type="password" id="new-password" class="form-control" minlength="6" required>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">At least 6 characters.</span>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="confirm-password">Confirm New Password</label>
-            <input type="password" id="confirm-password" class="form-control" minlength="6" required>
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Update Password</button>
-        </form>
+      <div class="gov-panel">
+        <div class="gov-panel-head"><h3>Change password</h3></div>
+        <div class="gov-panel-body">
+          <form id="change-password-form">
+            <div class="gov-field">
+              <label for="current-password">Current password</label>
+              <input type="password" id="current-password" required>
+            </div>
+            <div class="gov-field">
+              <label for="new-password">New password</label>
+              <input type="password" id="new-password" minlength="6" required>
+              <span style="font-size: 0.78rem; color: var(--muted);">At least 6 characters.</span>
+            </div>
+            <div class="gov-field">
+              <label for="confirm-password">Confirm new password</label>
+              <input type="password" id="confirm-password" minlength="6" required>
+            </div>
+            <button type="submit" class="gov-btn" style="width: 100%; margin-top:0.4rem;">Update password</button>
+          </form>
+        </div>
       </div>
 
       <!-- Change Login ID -->
-      <div class="card">
-        <h3 style="color: var(--primary-dark); margin-bottom: 1.25rem;">🆔 Change Login ID</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-          Your login ID is used to sign in. Changing it will require you to log in again.
-        </p>
-        <form id="change-id-form">
-          <div class="form-group">
-            <label class="form-label" for="new-admin-id">New Login ID</label>
-            <input type="text" id="new-admin-id" class="form-control" required placeholder="e.g. ST-UP">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="id-password">Confirm with Password</label>
-            <input type="password" id="id-password" class="form-control" required>
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Update Login ID</button>
-        </form>
+      <div class="gov-panel">
+        <div class="gov-panel-head"><h3>Change login ID</h3></div>
+        <div class="gov-panel-body">
+          <p style="font-size: 0.85rem; color: var(--muted); margin: 0 0 1rem;">
+            You will have to sign in again after changing this.
+          </p>
+          <form id="change-id-form">
+            <div class="gov-field">
+              <label for="new-admin-id">New login ID</label>
+              <input type="text" id="new-admin-id" required placeholder="e.g. ST-UP">
+            </div>
+            <div class="gov-field">
+              <label for="id-password">Your password</label>
+              <input type="password" id="id-password" required>
+            </div>
+            <button type="submit" class="gov-btn" style="width: 100%; margin-top:0.4rem;">Update login ID</button>
+          </form>
+        </div>
       </div>
     </div>
   </main>

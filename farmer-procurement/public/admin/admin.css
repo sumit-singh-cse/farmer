@@ -1,19 +1,229 @@
-/* Admin Portal CSS Styles */
+/* ============================================================
+   ADMIN CONSOLE — plain internal tool styling.
+   One system font, one accent, flat surfaces, no animation.
+   Scoped under body.admin-console. Class names unchanged.
+   ============================================================ */
 
-.stat-card {
-  border-top: 4px solid var(--primary-color);
+body.admin-console {
+  --ink:      #1f2328;
+  --paper:    #f4f5f6;
+  --surface:  #ffffff;
+  --line:     #e3e5e8;
+  --line-dk:  #cfd3d8;
+  --muted:    #6b7280;
+  --role:     #1f5c46;
+  --role-soft:#f2f5f3;
+  --ok:       #1f6b45;
+  --warn:     #8a5a00;
+  --danger:   #b4231c;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 15px;
 }
 
-.centre-status-badge {
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+/* One accent for every role — no per-role theming. */
+body.admin-console.role-state,
+body.admin-console.role-district,
+body.admin-console.role-centre { --role:#1f5c46; --role-soft:#f2f5f3; }
+
+body.admin-console main { max-width: 1100px; padding: 1.75rem 1.25rem 3rem; }
+body.admin-console h1,
+body.admin-console h2,
+body.admin-console h3 { font-family: inherit; font-weight: 600; color: var(--ink); }
+body.admin-console :where(.gov-ledger-val,.gov-table td.num,.gov-id) { font-variant-numeric: tabular-nums; }
+
+/* ---- Page heading ---- */
+.gov-masthead {
+  display:flex; justify-content:space-between; align-items:flex-end;
+  gap:1rem; flex-wrap:wrap;
+  padding-bottom:0.9rem; margin-bottom:1.25rem;
+  border-bottom:1px solid var(--line-dk);
+}
+.gov-eyebrow { font-size:0.8rem; color:var(--muted); }
+.gov-masthead h2 { font-size:1.4rem; margin:0.15rem 0 0.25rem; }
+.gov-masthead .gov-sub { color:var(--muted); font-size:0.88rem; }
+.gov-masthead .gov-sub strong { color:var(--ink); font-weight:600; }
+
+/* ---- Stat cells ---- */
+.gov-ledger {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:0.75rem; margin-bottom:1.25rem;
+}
+.gov-ledger:has(.gov-ledger-cell:last-child:nth-child(1)) { grid-template-columns:minmax(220px,300px); }
+.gov-ledger:has(.gov-ledger-cell:last-child:nth-child(2)) { grid-template-columns:repeat(2,minmax(200px,280px)); }
+.gov-ledger:has(.gov-ledger-cell:last-child:nth-child(3)) { grid-template-columns:repeat(3,minmax(190px,1fr)); }
+.gov-ledger-cell {
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:4px; padding:0.9rem 1rem 1rem;
+}
+.gov-ledger-label { font-size:0.82rem; color:var(--muted); }
+.gov-ledger-val { font-size:1.4rem; font-weight:600; line-height:1.2; margin:0.3rem 0 0.15rem; }
+.gov-ledger-note { font-size:0.78rem; color:var(--muted); }
+.gov-ledger-note.up { color:var(--ok); }
+.gov-ledger-note.warn { color:var(--warn); }
+.gov-meter { height:5px; background:#eceef0; border-radius:3px; margin-top:0.6rem; overflow:hidden; }
+.gov-meter > span { display:block; height:100%; background:var(--role); }
+
+/* ---- Panels ---- */
+.gov-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.gov-panel {
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:4px; margin-bottom:1rem; overflow:hidden;
+}
+.gov-panel-head {
+  display:flex; justify-content:space-between; align-items:center; gap:1rem;
+  padding:0.75rem 1.1rem; border-bottom:1px solid var(--line); background:#fafbfb;
+}
+.gov-panel-head h3 { font-size:0.98rem; margin:0; }
+.gov-panel-body { padding:1rem 1.1rem; }
+.gov-panel-body.flush { padding:0; }
+
+/* ---- Tables ---- */
+.gov-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+.gov-table th {
+  font-size:0.78rem; font-weight:600; color:var(--muted); text-align:left;
+  padding:0.6rem 1.1rem; border-bottom:1px solid var(--line-dk); background:#fafbfb;
+}
+.gov-table td { padding:0.65rem 1.1rem; border-bottom:1px solid var(--line); vertical-align:middle; }
+.gov-table tbody tr:last-child td { border-bottom:none; }
+.gov-table tbody tr:hover { background:#fafbfb; }
+.gov-table td.num { text-align:right; }
+.gov-table .empty { text-align:center; color:var(--muted); padding:1.75rem 1rem; }
+
+/* ---- ID text ---- */
+.gov-id {
+  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size:0.8rem; color:var(--ink);
 }
 
-table th {
-  padding: 0.75rem 0.5rem;
-  border-bottom: 2px solid var(--border-color);
+/* ---- Status ---- */
+.gov-status { display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem; }
+.gov-status::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--muted); }
+.gov-status.ok::before     { background:var(--ok); }
+.gov-status.warn::before   { background:var(--warn); }
+.gov-status.danger::before { background:var(--danger); }
+.gov-status.idle::before   { background:var(--line-dk); }
+
+.gov-tag {
+  font-size:0.78rem; padding:0.1rem 0.4rem; border-radius:3px;
+  background:#f0f1f2; color:var(--muted);
+}
+.gov-tag.warn { color:var(--warn); background:#fbf5e9; }
+
+/* ---- Buttons ---- */
+.gov-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:0.4rem;
+  font-family:inherit; font-size:0.86rem; font-weight:500;
+  padding:0.45rem 0.9rem; border-radius:4px; cursor:pointer;
+  border:1px solid var(--role); background:var(--role); color:#fff;
+}
+.gov-btn:hover { background:#194b39; border-color:#194b39; }
+.gov-btn.ghost { background:var(--surface); color:var(--ink); border-color:var(--line-dk); }
+.gov-btn.ghost:hover { background:#f4f5f6; border-color:var(--line-dk); }
+.gov-btn.sm { padding:0.3rem 0.6rem; font-size:0.82rem; }
+.gov-btn.danger { background:var(--surface); border-color:var(--line-dk); color:var(--danger); }
+.gov-btn.danger:hover { background:#fdf3f2; border-color:var(--danger); }
+
+.gov-link {
+  font-size:0.85rem; color:var(--role); background:none; border:none;
+  cursor:pointer; padding:0; text-decoration:underline;
+}
+.gov-link.danger { color:var(--danger); }
+.gov-link + .gov-link { margin-left:0.8rem; }
+
+/* ---- Activity list ---- */
+.gov-log { display:flex; flex-direction:column; }
+.gov-log-item { padding:0.75rem 0; border-bottom:1px solid var(--line); }
+.gov-log-item:last-child { border-bottom:none; }
+.gov-log-item .k { font-size:0.82rem; font-weight:600; margin-bottom:0.2rem; }
+.gov-log-item .k.ok { color:var(--ok); }
+.gov-log-item .k.warn { color:var(--warn); }
+.gov-log-item .k.info { color:var(--muted); }
+.gov-log-item p { font-size:0.85rem; color:var(--muted); margin:0; line-height:1.45; }
+
+/* ---- Forms ---- */
+.gov-field { margin-bottom:0.9rem; }
+.gov-field label { display:block; font-size:0.85rem; color:var(--ink); margin-bottom:0.3rem; }
+.gov-field input, .gov-field select {
+  width:100%; padding:0.5rem 0.65rem; font-family:inherit; font-size:0.88rem; color:var(--ink);
+  background:#fff; border:1px solid var(--line-dk); border-radius:4px;
+}
+.gov-field input:focus, .gov-field select:focus { outline:none; border-color:var(--role); }
+body.admin-console :where(a,button,input,select):focus-visible {
+  outline:2px solid var(--role); outline-offset:1px;
+}
+body.admin-console input:disabled, body.admin-console input[readonly] {
+  background:#f4f5f6; color:var(--muted);
 }
 
-table td {
-  padding: 0.75rem 0.5rem;
+/* ---- Responsive ---- */
+@media (max-width:900px){ .gov-grid{ grid-template-columns:1fr; } }
+@media (max-width:560px){
+  body.admin-console main{ padding:1.25rem 0.9rem 2.5rem; }
+  body.admin-console .gov-table th,
+  body.admin-console .gov-table td { padding-left:0.75rem; padding-right:0.75rem; }
+}
+
+/* ============================================================
+   TOP BAR — overrides the shared (farmer) navbar, admin only.
+   ============================================================ */
+body.admin-console header {
+  background: var(--surface);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border-bottom: 1px solid var(--line-dk);
+  box-shadow: none;
+  position: sticky; top: 0; z-index: 100;
+}
+body.admin-console .navbar-container { max-width: 1100px; padding: 0.55rem 1.25rem; }
+
+body.admin-console .logo-link {
+  font-family: inherit; font-size: 0.98rem; font-weight: 600;
+  color: var(--ink); gap: 0.5rem;
+}
+body.admin-console .logo-icon {
+  background: var(--role); border-radius: 4px; width: 26px; height: 26px;
+  font-size: 0; position: relative; box-shadow: none;
+}
+body.admin-console .logo-icon::before {
+  content: "PH"; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; font-size: 0.72rem; font-weight: 700; color: #fff;
+}
+body.admin-console .logo-link span::after {
+  content: " Admin"; color: var(--muted); font-weight: 400;
+}
+
+body.admin-console .nav-menu { gap: 0.15rem; }
+body.admin-console .nav-link {
+  font-size: 0.88rem; font-weight: 400; color: var(--muted);
+  padding: 0.35rem 0.65rem; border-radius: 4px;
+}
+body.admin-console .nav-link:hover { background: #f4f5f6; color: var(--ink); }
+body.admin-console .nav-link.active { background: transparent; color: var(--ink); font-weight: 600; }
+
+body.admin-console .nav-btn-cta {
+  background: transparent !important; color: var(--muted) !important;
+  border: 1px solid var(--line-dk); box-shadow: none; font-weight: 400; margin-left: 0.35rem;
+}
+body.admin-console .nav-btn-cta:hover {
+  background: #f4f5f6 !important; color: var(--ink) !important;
+  border-color: var(--line-dk); transform: none; box-shadow: none;
+}
+
+/* Role + ID shown as plain text, not a chip */
+body.admin-console .admin-idbadge {
+  display: flex; align-items: center; gap: 0.4rem; margin-right: 0.5rem;
+  padding: 0; background: none; border: none;
+}
+body.admin-console .admin-idbadge-role { font-size: 0.82rem; color: var(--ink); }
+body.admin-console .admin-idbadge-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem; color: var(--muted);
+}
+
+@media (max-width: 992px){
+  body.admin-console .admin-idbadge { width: 100%; justify-content: flex-start; }
+  body.admin-console .logo-link span::after { display: none; }
 }

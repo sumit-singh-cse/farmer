@@ -5,98 +5,89 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Login - Farmer Procurement Hub</title>
   <link rel="stylesheet" href="../common/style.css">
+  <link rel="stylesheet" href="admin.css">
   <style>
-    .admin-login-container {
-      max-width: 480px;
-      margin: 3rem auto;
-    }
-    .captcha-box {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      margin-top: 0.5rem;
-    }
+    body.admin-console main { max-width: 460px; }
+    .captcha-box { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.45rem; }
     .captcha-image-mock {
-      background: linear-gradient(45deg, #e2e8f0, #cbd5e1);
-      color: #334155;
-      font-weight: 700;
-      font-size: 1.2rem;
-      letter-spacing: 5px;
-      padding: 0.5rem 1rem;
-      border-radius: var(--radius-sm);
-      font-style: italic;
+      background: #f4f5f6; color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 1.05rem; letter-spacing: 3px;
+      padding: 0.35rem 0.8rem; border: 1px solid var(--line-dk); border-radius: 4px;
       user-select: none;
-      border: 1px dashed #94a3b8;
     }
     .captcha-refresh {
-      background: none;
-      border: none;
-      color: var(--primary-color);
-      cursor: pointer;
-      font-size: 1.1rem;
+      background: none; border: none; color: var(--role);
+      cursor: pointer; font-size: 0.85rem; text-decoration: underline; padding: 0;
     }
+    .demo-note { border: 1px solid var(--line); border-radius: 4px; padding: 0.85rem 1rem; margin-top: 1.25rem; }
+    .demo-note h4 { margin: 0 0 0.5rem; font-size: 0.88rem; }
+    .demo-note div { font-size: 0.82rem; color: var(--muted); line-height: 1.7; }
+    .demo-note code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; }
   </style>
 </head>
-<body>
+<body class="admin-console">
 
   <!-- Navbar -->
   <div id="navbar"></div>
 
   <!-- Main Content -->
   <main>
-    <div class="admin-login-container card">
-      <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; text-align: center; color: var(--primary-dark);">Admin Portal</h2>
-      <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">
-        Sign in to state, district, or procurement centre administration panels.
-      </p>
+    <div class="gov-panel">
+      <div class="gov-panel-head"><h3>Admin sign in</h3></div>
+      <div class="gov-panel-body">
+        <p style="font-size:0.85rem; color:var(--muted); margin:0 0 1.1rem;">
+          For state, district and centre accounts.
+        </p>
 
-      <form id="admin-login-form">
-        <div class="form-group">
-          <label class="form-label" for="admin-role">Administrative Role</label>
-          <select id="admin-role" class="form-control" required>
-            <option value="">-- Select Role Level --</option>
-            <option value="state">State Level Admin</option>
-            <option value="district">District Level Admin</option>
-            <option value="centre">Centre Operator</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="admin-id">Admin ID / Code</label>
-          <input type="text" id="admin-id" class="form-control" placeholder="Enter ID (e.g. ST-IND-01)" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="admin-password">Password</label>
-          <input type="password" id="admin-password" class="form-control" placeholder="Enter security password" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="admin-otp">OTP (Security Key)</label>
-          <input type="text" id="admin-otp" class="form-control" placeholder="Enter temporary dynamic OTP" required>
-          <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">Demo OTP: 9999 (for all admin logins)</span>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="captcha-input">Captcha Verification</label>
-          <input type="text" id="captcha-input" class="form-control" placeholder="Type the characters below" required>
-          <div class="captcha-box">
-            <span class="captcha-image-mock" id="captcha-text">X7m9K</span>
-            <button type="button" class="captcha-refresh" id="refresh-captcha-btn" title="Refresh Captcha">🔄</button>
+        <form id="admin-login-form">
+          <div class="gov-field">
+            <label for="admin-role">Role</label>
+            <select id="admin-role" required>
+              <option value="">Select role</option>
+              <option value="state">State</option>
+              <option value="district">District</option>
+              <option value="centre">Centre operator</option>
+            </select>
           </div>
-        </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Admin Login</button>
-      </form>
+          <div class="gov-field">
+            <label for="admin-id">Login ID</label>
+            <input type="text" id="admin-id" placeholder="e.g. ST-UP" required>
+          </div>
 
-      <!-- Demo Credentials Info -->
-      <div style="margin-top: 2rem; padding: 1rem; background: #f8fafc; border-radius: var(--radius-md); border: 1px dashed #cbd5e1;">
-        <h4 style="margin-bottom: 0.75rem; color: var(--primary-dark); font-size: 0.95rem;">📋 Demo Admin Credentials</h4>
-        <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.8;">
-          <div><strong>State Admin:</strong> ID: <code>ST-UP</code>, <code>ST-MP</code>, <code>ST-MH</code>… (any state) | Pass: <code>state123</code></div>
-          <div><strong>District Admin:</strong> ID: <code>DT-IND-01</code> | Pass: <code>district123</code></div>
-          <div><strong>Centre Operator:</strong> ID: <code>OP-UJN-02</code> or the <code>CN-XX-…</code> code your district issued | Pass: <code>operator123</code> / issued temp password</div>
-          <div style="margin-top: 0.5rem; color: var(--warning-color);">⚠️ Use OTP: <code>9999</code> for all logins</div>
+          <div class="gov-field">
+            <label for="admin-password">Password</label>
+            <input type="password" id="admin-password" required>
+          </div>
+
+          <div class="gov-field">
+            <label for="admin-otp">OTP</label>
+            <input type="text" id="admin-otp" inputmode="numeric" required>
+            <span style="font-size:0.78rem; color:var(--muted);">Demo OTP: 9999</span>
+          </div>
+
+          <div class="gov-field">
+            <label for="captcha-input">Captcha</label>
+            <input type="text" id="captcha-input" placeholder="Type the characters shown" required>
+            <div class="captcha-box">
+              <span class="captcha-image-mock" id="captcha-text">X7m9K</span>
+              <button type="button" class="captcha-refresh" id="refresh-captcha-btn" title="Refresh captcha">Refresh</button>
+            </div>
+          </div>
+
+          <button type="submit" class="gov-btn" style="width: 100%; margin-top: 0.6rem;">Sign in</button>
+        </form>
+
+        <!-- Demo Credentials Info -->
+        <div class="demo-note">
+          <h4>Demo accounts</h4>
+          <div>
+            <div>State — <code>ST-UP</code>, <code>ST-MP</code>, <code>ST-MH</code> (any state) · <code>state123</code></div>
+            <div>District — <code>DT-IND-01</code> · <code>district123</code></div>
+            <div>Centre — <code>OP-UJN-02</code> or your issued <code>CN-XX-…</code> code · <code>operator123</code> or issued temp password</div>
+            <div style="margin-top:0.4rem;">OTP for all logins: <code>9999</code></div>
+          </div>
         </div>
       </div>
     </div>
