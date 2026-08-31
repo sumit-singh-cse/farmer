@@ -148,9 +148,30 @@ const centreSchema = new mongoose.Schema({
   // --- New (additive) fields. All optional/defaulted so existing centres keep working ---
   operator: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // assigned centre operator
   status: { type: String, enum: ['active', 'closed'], default: 'active' },
+  // Rice (paddy) variety handled at this centre. Decides the rice MSP paid to farmers.
+  riceVariety: { type: String, enum: ['Common', 'Grade A'], default: 'Common' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // district authority who created it
 }, { timestamps: true });
 const Centre = mongoose.model('Centre', centreSchema);
+
+/**
+ * Minimum Support Price (per Quintal).
+ *  - Wheat (Rabi 2026-27): Rs 2585
+ *  - Rice/Paddy (Kharif 2026-27): variety chosen at the centre
+ *       Common variety  -> Rs 2441
+ *       Grade A variety -> Rs 2461
+ * @param {string} cropType - booking.produceType ('wheat' | 'rice' | ...)
+ * @param {Object} [centre] - populated Centre doc (for rice variety)
+ */
+function getMspRate(cropType, centre) {
+  const crop = (cropType || '').toLowerCase();
+  if (crop === 'wheat') return 2585;
+  if (crop === 'rice' || crop === 'paddy') {
+    const variety = (centre && centre.riceVariety) || 'Common';
+    return variety === 'Grade A' ? 2461 : 2441;
+  }
+  return 2000;
+}
 
 // Land Model (Phase 3)
 const landSchema = new mongoose.Schema({
@@ -576,7 +597,7 @@ app.get('/api/centres/:districtName', async (req, res) => {
 
 // POST Create Centre (For District Admin)
 app.post('/api/admin/centres', async (req, res) => {
-  const { name, storageCapacity, operatingHours, slotsPerHour, state, district } = req.body;
+  const { name, storageCapacity, operatingHours, slotsPerHour, state, district, riceVariety } = req.body;
 
   try {
     if (!name || !storageCapacity || !operatingHours || !slotsPerHour || !state || !district) {
@@ -593,7 +614,8 @@ app.post('/api/admin/centres', async (req, res) => {
       district,
       storageCapacity: Number(storageCapacity),
       operatingHours,
-      slotsPerHour: Number(slotsPerHour)
+      slotsPerHour: Number(slotsPerHour),
+      riceVariety: riceVariety === 'Grade A' ? 'Grade A' : 'Common'
     });
 
     await centre.save();
@@ -1343,8 +1365,7 @@ app.post('/api/procurements', authenticateToken, async (req, res) => {
     await procurement.save();
 
     // Calculate dynamic rate and amount for Payment
-    const crop = (booking.produceType || '').toLowerCase();
-    const ratePerQuintal = crop === 'rice' ? 2183 : crop === 'wheat' ? 2275 : 2000;
+    const ratePerQuintal = getMspRate(booking.produceType, booking.centre);
     const acceptedQtyVal = parseFloat(acceptedQuantity);
     const amount = Math.round(acceptedQtyVal * ratePerQuintal * 100) / 100;
 
@@ -1609,7 +1630,7 @@ app.patch('/api/admin/centres/:id', authenticateToken, async (req, res) => {
     }
 
     const { id } = req.params;
-    const { name, storageCapacity, operatingHours, slotsPerHour } = req.body;
+    const { name, storageCapacity, operatingHours, slotsPerHour, riceVariety } = req.body;
 
     const centre = await Centre.findById(id);
     if (!centre) {
@@ -1624,6 +1645,7 @@ app.patch('/api/admin/centres/:id', authenticateToken, async (req, res) => {
     if (storageCapacity !== undefined) centre.storageCapacity = Number(storageCapacity);
     if (operatingHours !== undefined) centre.operatingHours = operatingHours;
     if (slotsPerHour !== undefined) centre.slotsPerHour = Number(slotsPerHour);
+    if (riceVariety === 'Common' || riceVariety === 'Grade A') centre.riceVariety = riceVariety;
 
     await centre.save();
     console.log(`[Success] Centre ${centre.centreId} updated by district admin ${req.user.adminId}`);
@@ -1838,7 +1860,7 @@ app.post('/api/district/centres', authenticateToken, async (req, res) => {
     if (req.user.role !== 'district') {
       return res.status(403).json({ error: 'Only district authorities can create centres' });
     }
-    const { name, storageCapacity, operatingHours, slotsPerHour, operatorName, operatorMobile } = req.body;
+    const { name, storageCapacity, operatingHours, slotsPerHour, operatorName, operatorMobile, riceVariety } = req.body;
     if (!name || !storageCapacity || !operatorName || !operatorMobile) {
       return res.status(400).json({ error: 'Centre name, storage capacity, operator name and operator mobile are required' });
     }
@@ -1876,6 +1898,7 @@ app.post('/api/district/centres', authenticateToken, async (req, res) => {
       storageCapacity: Number(storageCapacity),
       operatingHours: operatingHours || '09:00 AM - 05:00 PM',
       slotsPerHour: slotsPerHour ? Number(slotsPerHour) : 15,
+      riceVariety: riceVariety === 'Grade A' ? 'Grade A' : 'Common',
       status: 'active',
       createdBy: req.user._id
     });
@@ -1939,6 +1962,7 @@ app.get('/api/district/centres', authenticateToken, async (req, res) => {
         name: c.name,
         status: c.status || 'active',
         storageCapacity: c.storageCapacity,
+        riceVariety: c.riceVariety || 'Common',
         operatorName: op ? [op.firstName, op.lastName].filter(Boolean).join(' ') : '(none)',
         operatorLoginId: op ? op.adminId : null,
         operatorMobile: op ? op.mobile : null,
@@ -1984,6 +2008,7 @@ app.get('/api/district/centres/:id', authenticateToken, async (req, res) => {
       storageCapacity: centre.storageCapacity,
       operatingHours: centre.operatingHours,
       slotsPerHour: centre.slotsPerHour,
+      riceVariety: centre.riceVariety || 'Common',
       operator: op ? {
         userId: op._id,
         name: [op.firstName, op.lastName].filter(Boolean).join(' '),
@@ -2230,8 +2255,7 @@ app.post('/api/centre/procurement/confirm', authenticateToken, async (req, res) 
       recordedBy: req.user._id
     });
 
-    const crop = (booking.produceType || '').toLowerCase();
-    const ratePerQuintal = crop === 'rice' ? 2183 : crop === 'wheat' ? 2275 : 2000;
+    const ratePerQuintal = getMspRate(booking.produceType, booking.centre);
     const amount = Math.round(aq * ratePerQuintal * 100) / 100;
     await Payment.create({
       procurement: procurement._id,

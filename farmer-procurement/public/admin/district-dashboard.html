@@ -124,6 +124,14 @@
               <input type="number" id="slots-cap" value="15" min="1" required>
               <span style="font-size:0.78rem; color:var(--muted);">5 Qtl takes about 5 minutes.</span>
             </div>
+            <div class="gov-field">
+              <label for="rice-variety">Rice (paddy) variety at this centre</label>
+              <select id="rice-variety">
+                <option value="Common">Common variety (MSP &#8377;2441/Qtl)</option>
+                <option value="Grade A">Grade A variety (MSP &#8377;2461/Qtl)</option>
+              </select>
+              <span style="font-size:0.78rem; color:var(--muted);">Wheat MSP is fixed at &#8377;2585/Qtl.</span>
+            </div>
 
             <div style="border-top:1px solid var(--line); margin:1.1rem 0 0.9rem; padding-top:0.9rem;">
               <div style="font-size:0.85rem; font-weight:600;">Operator</div>
@@ -193,6 +201,13 @@
           <div class="gov-field">
             <label for="edit-slots-cap">Slots per hour</label>
             <input type="number" id="edit-slots-cap" min="1" required>
+          </div>
+          <div class="gov-field">
+            <label for="edit-rice-variety">Rice (paddy) variety</label>
+            <select id="edit-rice-variety">
+              <option value="Common">Common variety (MSP &#8377;2441/Qtl)</option>
+              <option value="Grade A">Grade A variety (MSP &#8377;2461/Qtl)</option>
+            </select>
           </div>
           <div style="display:flex; gap:0.6rem; margin-top:1.25rem;">
             <button type="button" class="gov-btn ghost" style="flex:1;" onclick="closeEditModal()">Cancel</button>
@@ -344,6 +359,7 @@
       document.getElementById('edit-storage-cap').value = centre.storageCapacity;
       document.getElementById('edit-operating-hours').value = centre.operatingHours;
       document.getElementById('edit-slots-cap').value = centre.slotsPerHour;
+      document.getElementById('edit-rice-variety').value = centre.riceVariety || 'Common';
       editModal.classList.add('open');
     }
 
@@ -356,7 +372,8 @@
         name: document.getElementById('edit-centre-name').value,
         storageCapacity: document.getElementById('edit-storage-cap').value,
         operatingHours: document.getElementById('edit-operating-hours').value,
-        slotsPerHour: document.getElementById('edit-slots-cap').value
+        slotsPerHour: document.getElementById('edit-slots-cap').value,
+        riceVariety: document.getElementById('edit-rice-variety').value
       };
       fetchAPI(`/api/admin/centres/${centreId}`, { method: 'PATCH', body }).then(() => {
         showToast('Centre updated', 'success');
@@ -374,7 +391,8 @@
         operatingHours: document.getElementById('operating-hours').value,
         slotsPerHour: document.getElementById('slots-cap').value,
         operatorName: document.getElementById('operator-name').value,
-        operatorMobile: document.getElementById('operator-mobile').value
+        operatorMobile: document.getElementById('operator-mobile').value,
+        riceVariety: document.getElementById('rice-variety').value
       };
       fetchAPI('/api/district/centres', { method: 'POST', body })
         .then(data => {
@@ -404,6 +422,7 @@
           <div><span class="lbl">Login ID</span><br><strong>${op ? op.loginId : '—'}</strong></div>
           <div><span class="lbl">Mobile</span><br><strong>${op ? op.mobile : '—'}</strong></div>
           <div><span class="lbl">Capacity</span><br><strong>${c.storageCapacity.toLocaleString()} Qtl</strong></div>
+          <div><span class="lbl">Rice variety / MSP</span><br><strong>${(c.riceVariety || 'Common')} (&#8377;${(c.riceVariety === 'Grade A') ? '2461' : '2441'}/Qtl)</strong></div>
           <div><span class="lbl">Bookings</span><br><strong>${c.stats.totalBookings}</strong></div>
           <div><span class="lbl">Completed</span><br><strong>${c.stats.completed}</strong></div>
           <div><span class="lbl">Active bookings</span><br><strong>${c.stats.active}</strong></div>
