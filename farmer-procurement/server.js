@@ -805,33 +805,58 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
       });
     }
 
-    // 3. Generate sequential token number
-    const totalBookingsCount = await Booking.countDocuments();
-    const tokenNumber = 'T-' + (1000 + totalBookingsCount + 1).toString();
+    // 3. Generate a UNIQUE token number (robust against cancellations & races)
+    //    NOTE: count-based tokens collide after a booking is deleted (count drops
+    //    and re-issues an existing token) → E11000. We derive from the highest
+    //    existing token instead, and retry on the rare concurrent-insert clash.
+    let booking;
+    let saveAttempt = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const existingTokens = await Booking.find({}, { tokenNumber: 1 }).lean();
+      const maxTokenNum = existingTokens.reduce((max, b) => {
+        const n = parseInt(String(b.tokenNumber || '').replace(/[^\d]/g, ''), 10);
+        return Number.isFinite(n) && n > max ? n : max;
+      }, 1000);
+      const tokenNumber = 'T-' + (maxTokenNum + 1).toString();
 
-    // 4. Calculate queue position for that date & centre
-    const dayBookingsCount = await Booking.countDocuments({
-      centre: centreId,
-      date
-    });
-    const queuePosition = dayBookingsCount + 1;
+      // 4. Calculate queue position for that date & centre
+      const dayBookingsCount = await Booking.countDocuments({
+        centre: centreId,
+        date
+      });
+      const queuePosition = dayBookingsCount + 1;
 
-    // 5. Create Booking
-    const booking = new Booking({
-      farmer: req.user._id,
-      land: landId,
-      produceType: cropType,
-      quantity: qtyVal,
-      district,
-      centre: centreId,
-      date,
-      timeWindow,
-      tokenNumber,
-      queuePosition,
-      capacityUnits: requestedUnits
-    });
+      // 5. Create Booking
+      booking = new Booking({
+        farmer: req.user._id,
+        land: landId,
+        produceType: cropType,
+        quantity: qtyVal,
+        district,
+        centre: centreId,
+        date,
+        timeWindow,
+        tokenNumber,
+        queuePosition,
+        capacityUnits: requestedUnits
+      });
 
-    await booking.save();
+      try {
+        await booking.save();
+        break; // saved successfully with a unique token
+      } catch (saveErr) {
+        // Duplicate tokenNumber under concurrent inserts → recompute & retry
+        if (saveErr && saveErr.code === 11000 && saveAttempt < 5) {
+          saveAttempt++;
+          continue;
+        }
+        throw saveErr;
+      }
+    }
+
+    const tokenNumber = booking.tokenNumber;
+    const queuePosition = booking.queuePosition;
 
     // 6. Update Land bookedQuantity
     land.bookedQuantity += qtyVal;
