@@ -10,6 +10,7 @@
     "test": "node tests/run-tests.js"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -18,8 +19,11 @@
     "express-validator": "^7.2.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "mongo-baileys": "^1.0.0",
     "mongoose": "^8.5.1",
     "multer": "^2.2.0",
+    "pino": "^9.0.0",
+    "qrcode-terminal": "^0.12.0",
     "uuid": "^10.0.0"
   },
   "engines": {

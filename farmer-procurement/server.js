@@ -19,6 +19,7 @@ const { v4: uuidv4 } = require('uuid');
 
 // SMS service (demo OTP mode only - no real SMS)
 const { sendOTP, sendBookingConfirmation, sendPaymentNotification, sendRegistrationConfirmation } = require('./services/smsService');
+const { connectWhatsApp, sendWhatsAppMessage, getWAStatus } = require('./services/waService');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -338,6 +339,9 @@ mongoose.connect(MONGODB_URI)
     await seedLocations();
     await seedStateAuthorities();
     await seedDistrictAuthorities();
+    // Start WhatsApp (Baileys) after DB is ready — auth persists in Mongo.
+    // Non-blocking: failures here never affect the web app / farmer flows.
+    connectWhatsApp().catch((err) => console.error('[WA] init failed:', err.message));
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);
@@ -897,6 +901,12 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
       estimatedTime: requestedUnits * 5
     }).catch(err => console.error('Booking notification failed:', err.message));
 
+    // WhatsApp booking confirmation (non-blocking).
+    sendWhatsAppMessage(
+      req.user.mobile,
+      `Farmer Procurement Hub\n✅ Slot book ho gaya!\nToken: ${tokenNumber}\nCentre: ${centre.name}\nDate: ${date} (${timeWindow})\nQueue: #${queuePosition}\nSamay par pahuchein. Dhanyavaad.`
+    ).catch(err => console.warn(`[WA] Booking msg failed: ${err.message}`));
+
     return res.status(201).json({
       status: 'success',
       message: 'Slot booked successfully!',
@@ -1023,8 +1033,8 @@ app.post('/api/send-otp', async (req, res) => {
     return res.status(400).json({ error: 'Please provide a valid 10-digit mobile number' });
   }
 
-  // Fixed demo OTP for testing
-  const otpCode = '123456';
+  // Random 6-digit OTP (demo: also returned in response as fallback)
+  const otpCode = String(Math.floor(100000 + Math.random() * 900000));
 
   // Store OTP with expiry (30 minutes for demo)
   otpStore.set(mobile, {
@@ -1034,6 +1044,16 @@ app.post('/api/send-otp', async (req, res) => {
   });
 
   console.log(`[OTP-Demo] Generated code ${otpCode} for mobile: ${mobile}`);
+
+  // Deliver the OTP over WhatsApp (non-blocking, never breaks the flow).
+  sendWhatsAppMessage(
+    mobile,
+    `Farmer Procurement Hub\nAapka OTP hai: ${otpCode}\n(30 minute me expire hoga. Kisi ke saath share na karein.)`
+  ).then(() => {
+    console.log(`[WA] OTP sent to ${mobile}`);
+  }).catch((err) => {
+    console.warn(`[WA] OTP send skipped/failed for ${mobile}: ${err.message}`);
+  });
 
   // Always return demo OTP
   return res.status(200).json({
@@ -1089,6 +1109,12 @@ app.post('/api/register', async (req, res) => {
 
     // Send registration confirmation notification (demo mode)
     await sendRegistrationConfirmation(mobile, `${firstName} ${lastName}`);
+
+    // WhatsApp welcome message (non-blocking).
+    sendWhatsAppMessage(
+      mobile,
+      `Farmer Procurement Hub\n🌾 Namaste ${firstName}!\nAapka account safaltapoorvak register ho gaya. Ab aap slot book kar sakte hain.`
+    ).catch(err => console.warn(`[WA] Welcome msg failed: ${err.message}`));
 
     return res.status(201).json({
       status: 'success',
@@ -1609,6 +1635,12 @@ app.post('/api/admin/payments/:id/release', authenticateToken, async (req, res) 
         tokenNumber: payment.procurement?.booking?.tokenNumber || 'N/A',
         paymentMethod: 'Released'
       }).catch(err => console.error('Payment notification failed:', err.message));
+
+      // WhatsApp payment confirmation (non-blocking).
+      sendWhatsAppMessage(
+        payment.farmer.mobile,
+        `Farmer Procurement Hub\n💰 Payment release ho gaya!\nRaashi: ₹${payment.amount}\nToken: ${payment.procurement?.booking?.tokenNumber || 'N/A'}\nAapke khaate me jald jama hoga. Dhanyavaad.`
+      ).catch(err => console.warn(`[WA] Payment msg failed: ${err.message}`));
     }
 
     return res.status(200).json({
@@ -2193,10 +2225,16 @@ app.post('/api/centre/procurement/start-otp', authenticateToken, async (req, res
       await booking.save();
     }
 
-    // Demo OTP (fixed) stored against the farmer's mobile
-    const code = '123456';
+    // Random 6-digit procurement OTP stored against the farmer's mobile
+    const code = String(Math.floor(100000 + Math.random() * 900000));
     otpStore.set(booking.farmer.mobile, { code, expiresAt: Date.now() + 30 * 60 * 1000, attempts: 0 });
     console.log(`[Demo] Procurement OTP for token ${booking.tokenNumber} sent to farmer ${booking.farmer.mobile}: ${code}`);
+
+    // Deliver procurement OTP over WhatsApp (non-blocking).
+    sendWhatsAppMessage(
+      booking.farmer.mobile,
+      `Farmer Procurement Hub\nToken ${booking.tokenNumber} ke procurement ke liye OTP: ${code}\nCentre operator ko batayein. (30 min me expire)`
+    ).catch(err => console.warn(`[WA] Procurement OTP failed: ${err.message}`));
     return res.status(200).json({
       status: 'success',
       message: `OTP sent to farmer's mobile (${booking.farmer.mobile})`,
